@@ -13,41 +13,73 @@ export function TenantAdminDashboard() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const navigate = useNavigate();
   
-  const [tenantId, setTenantId] = useState<string | null>('t1');
+  const queryParams = new URLSearchParams(window.location.hash.includes('?') ? window.location.hash.split('?')[1] : '');
+  const initialTenantId = queryParams.get('tenantId') || 't1';
+  
+  const [tenantId, setTenantId] = useState<string | null>(initialTenantId);
   const [copiedLink, setCopiedLink] = useState(false);
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   
   const loadData = async () => {
     try {
-      let activeId = tenantId;
+      const urlParams = new URLSearchParams(window.location.hash.includes('?') ? window.location.hash.split('?')[1] : '');
+      const paramTenantId = urlParams.get('tenantId');
+      let activeId = paramTenantId || tenantId || 't1';
       setErrorMsg(null);
+      
+      if (!isSupabaseConfigured) {
+        setIsSuperAdmin(true);
+      }
       
       if (isSupabaseConfigured) {
          // Pegar o UUID do usuário logado pelo Supabase Auth
          const { data: { user } } = await supabase!.auth.getUser();
          if (!user) {
-            window.location.href = '/login';
+            window.location.href = '#/login';
             return;
          }
-         // Buscar o tenant pertencente a este Owner
-         const { data: userTenant, error: extErr } = await supabase!.from('tenants').select('id, nome').eq('owner_id', user.id).maybeSingle();
          
-         if (extErr) {
-             console.error("Erro Database RLS:", extErr);
-             if (extErr.code === '42P01' || extErr.message?.includes('does not exist')) {
-                 setErrorMsg("O banco de dados está vazio! Você precisa rodar o script 'supabase_schema.sql' no SQL Editor.");
-             } else {
-                 setErrorMsg(`Erro de DB: ${extErr.message}`);
-             }
-             return;
-         }
+         // Verificar se é Super Admin
+         const { data: superAdmin } = await supabase!
+           .from('super_admins')
+           .select('id')
+           .eq('id', user.id)
+           .maybeSingle();
 
-         if (userTenant) {
-           activeId = userTenant.id;
+         if (superAdmin) {
+           setIsSuperAdmin(true);
+           if (paramTenantId) {
+             activeId = paramTenantId;
+           } else {
+             // Se é superadmin mas não especificou no parâmetro, buscar o primeiro
+             const { data: firstTenant } = await supabase!.from('tenants').select('id').limit(1).maybeSingle();
+             if (firstTenant) {
+               activeId = firstTenant.id;
+             }
+           }
          } else {
-           console.log("Nenhum Lava Jato encontrado para este usuário");
-           setErrorMsg(`Você ainda não tem permissão Administrativa. `);
-           setData({ isUnassigned: true, userId: user.id, email: user.email });
-           return;
+           setIsSuperAdmin(false);
+           // Buscar o tenant pertencente a este Owner
+           const { data: userTenant, error: extErr } = await supabase!.from('tenants').select('id, nome').eq('owner_id', user.id).maybeSingle();
+           
+           if (extErr) {
+               console.error("Erro Database RLS:", extErr);
+               if (extErr.code === '42P01' || extErr.message?.includes('does not exist')) {
+                   setErrorMsg("O banco de dados está vazio! Você precisa rodar o script 'supabase_schema.sql' no SQL Editor.");
+               } else {
+                   setErrorMsg(`Erro de DB: ${extErr.message}`);
+               }
+               return;
+           }
+
+           if (userTenant) {
+             activeId = userTenant.id;
+           } else {
+             console.log("Nenhum Lava Jato encontrado para este usuário");
+             setErrorMsg(`Você ainda não tem permissão Administrativa. `);
+             setData({ isUnassigned: true, userId: user.id, email: user.email });
+             return;
+           }
          }
       }
 
@@ -71,7 +103,7 @@ export function TenantAdminDashboard() {
     if (isSupabaseConfigured) {
       await supabase!.auth.signOut();
     }
-    window.location.href = '/login';
+    window.location.href = '#/login';
   };
 
   useEffect(() => {
@@ -80,7 +112,7 @@ export function TenantAdminDashboard() {
       window.addEventListener('localDataChanged', loadData);
       return () => window.removeEventListener('localDataChanged', loadData);
     }
-  }, []);
+  }, [window.location.hash]);
 
   if (data?.isUnassigned) {
      return (
@@ -170,6 +202,20 @@ export function TenantAdminDashboard() {
   
   return (
     <div className="min-h-screen bg-slate-100 flex flex-col font-sans">
+      {isSuperAdmin && (
+        <div className="bg-blue-600 text-white text-xs sm:text-sm px-4 py-2 flex justify-between items-center font-semibold shadow-md relative z-20">
+          <div className="flex items-center gap-2">
+            <span className="bg-blue-800 text-white px-2 py-0.5 rounded text-[10px] uppercase font-black tracking-wider">Gestor Total</span>
+            <span>Você está visualizando o Lava Jato: <strong className="text-white underline">{tenant.nome}</strong></span>
+          </div>
+          <button 
+            onClick={() => navigate('/superadmin')} 
+            className="bg-white/10 hover:bg-white/20 px-3 py-1 rounded text-white text-xs font-bold transition-all border border-white/20 cursor-pointer"
+          >
+            Voltar ao Painel Geral
+          </button>
+        </div>
+      )}
       <header className="bg-slate-900 text-white p-4 sm:p-6 shadow-md">
         <div className="max-w-6xl mx-auto flex flex-col gap-3">
           <div className="flex flex-row justify-between items-center gap-4">
@@ -181,7 +227,16 @@ export function TenantAdminDashboard() {
               <div className="text-xs sm:text-sm text-slate-400">
                 Vence em: <span className="font-bold text-white">{diasRestantes}d</span>
               </div>
-              <button onClick={handleLogout} className="text-slate-400 hover:text-white transition-colors bg-slate-800 hover:bg-slate-700 p-2 rounded-xl" title="Sair da Conta">
+              {isSuperAdmin && (
+                <button 
+                  onClick={() => navigate('/superadmin')} 
+                  className="bg-blue-600 hover:bg-blue-500 text-white px-2.5 py-1.5 rounded-lg text-xs font-black tracking-wide cursor-pointer flex items-center gap-1 shrink-0"
+                  title="Voltar ao Painel Geral"
+                >
+                  PAINEL GERAL
+                </button>
+              )}
+              <button onClick={handleLogout} className="text-slate-400 hover:text-white transition-colors bg-slate-800 hover:bg-slate-700 p-2 rounded-xl cursor-pointer" title="Sair da Conta">
                 <LogOut className="w-4 h-4 sm:w-5 sm:h-5" />
               </button>
             </div>

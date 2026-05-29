@@ -218,9 +218,10 @@ export function SuperAdminDashboard() {
                     </Button>
                     <Button 
                       variant="secondary" 
-                      className="w-1/2"
+                      className="w-1/2 bg-slate-200 hover:bg-blue-50 hover:text-blue-700 text-slate-800 border-none transition-all flex items-center justify-center font-bold text-xs"
+                      onClick={() => navigate(`/admin?tenantId=${tenant.id}`)}
                     >
-                      Editar Preços
+                      Gerenciar Painel
                     </Button>
                   </div>
                 </div>
