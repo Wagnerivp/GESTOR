@@ -12,8 +12,8 @@ export function Login() {
   const navigate = useNavigate();
 
   // Debug info
-  const supabaseUrlStr = (import.meta.env.VITE_SUPABASE_URL || '').trim();
-  const hasKey = Boolean(import.meta.env.VITE_SUPABASE_ANON_KEY);
+  const supabaseUrlStr = ((import.meta as any).env.VITE_SUPABASE_URL || '').trim();
+  const hasKey = Boolean((import.meta as any).env.VITE_SUPABASE_ANON_KEY);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -107,54 +107,57 @@ export function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-100 flex items-center justify-center p-6 font-sans">
-      <Card className="max-w-md w-full p-8 border border-slate-200">
-        <div className="text-center mb-8">
-          <div className="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center font-bold text-white text-xl mx-auto mb-4">
-            W
+    <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4 sm:p-6 font-sans relative overflow-hidden">
+      {/* Background ambient glow */}
+      <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-blue-600/10 rounded-full blur-3xl pointer-events-none"></div>
+
+      <Card className="max-w-md w-full p-5 sm:p-8 border border-slate-800 bg-slate-900/40 backdrop-blur-md text-white rounded-3xl relative z-10">
+        <div className="text-center mb-6 sm:mb-8">
+          <div className="w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center font-black text-white text-xl mx-auto mb-4 shadow-lg shadow-blue-500/20">
+            GLJ
           </div>
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
-            Login no Sistema
+          <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight">
+            Acessar Sistema
           </h1>
-          <p className="text-slate-500 text-sm mt-1">
-            Acesse o seu painel de gestão
+          <p className="text-slate-400 text-xs sm:text-sm mt-1">
+            Entre no painel de Gestão Lava Jatos
           </p>
-          <div className="mt-2 text-xs text-slate-400 bg-slate-50 p-2 rounded max-w-sm mx-auto overflow-hidden text-left border">
-             <span className="font-bold">Debug Env:</span><br/>
-             URL: {supabaseUrlStr ? supabaseUrlStr : '(vazio)'}<br/>
-             KEY: {hasKey ? 'Configurada' : '(vazio)'}<br/>
-             Status DB: {isSupabaseConfigured ? 'Pronto' : 'Faltam configs'}
+          <div className="mt-4 text-[10px] sm:text-xs text-slate-400 bg-slate-950/60 p-2.5 rounded-xl text-left border border-slate-800 max-w-sm mx-auto overflow-hidden">
+             <span className="font-bold text-slate-300">Status do Banco:</span><br/>
+             {isSupabaseConfigured ? '🟢 Supabase Integrado' : '🟡 Modo Demonstração (Mock)'}
           </div>
         </div>
 
         {errorMsg && (
-          <div className="mb-4 bg-red-50 text-red-600 text-[13px] font-medium p-3 rounded-lg border border-red-200">
+          <div className="mb-4 bg-red-950/40 text-red-400 text-xs sm:text-[13px] font-medium p-3 rounded-lg border border-red-900/50">
             {errorMsg}
           </div>
         )}
 
-        <form onSubmit={handleLogin} className="space-y-5">
+        <form onSubmit={handleLogin} className="space-y-4 sm:space-y-5">
           <div>
-            <label className="block text-sm font-semibold text-slate-700 mb-1.5">
+            <label className="block text-xs sm:text-sm font-semibold text-slate-300 mb-1.5">
               E-mail
             </label>
             <Input
               type="email"
               required
               placeholder="seu@email.com"
+              className="bg-slate-900 border-slate-800 text-white placeholder:text-slate-500 h-10 sm:h-11 text-xs sm:text-sm rounded-xl"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
             />
           </div>
 
           <div>
-            <label className="block text-sm font-semibold text-slate-700 mb-1.5">
+            <label className="block text-xs sm:text-sm font-semibold text-slate-300 mb-1.5">
               Senha
             </label>
             <Input
               type="password"
               required
               placeholder="••••••••"
+              className="bg-slate-900 border-slate-800 text-white placeholder:text-slate-500 h-10 sm:h-11 text-xs sm:text-sm rounded-xl"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
             />
@@ -162,19 +165,19 @@ export function Login() {
 
           <Button
             type="submit"
-            className="w-full h-12 bg-blue-600 hover:bg-blue-700 disabled:opacity-50"
+            className="w-full h-11 sm:h-12 bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-bold shadow-lg shadow-blue-500/20 active:scale-[0.98] transition-all rounded-xl disabled:opacity-50"
             disabled={loading}
           >
             {loading ? "Acessando..." : "Entrar na Conta"}
           </Button>
         </form>
 
-        <div className="mt-6 text-center">
-          <p className="text-[13px] text-slate-500">
+        <div className="mt-5 sm:mt-6 text-center">
+          <p className="text-xs sm:text-[13px] text-slate-400">
             Ainda não tem conta?{" "}
             <a
-              href="/cadastro-parceiro"
-              className="text-blue-600 font-medium hover:underline"
+              href="#/cadastro-parceiro"
+              className="text-blue-500 font-semibold hover:underline"
             >
               Teste Grátis
             </a>

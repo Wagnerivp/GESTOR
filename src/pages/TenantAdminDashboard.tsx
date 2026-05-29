@@ -4,7 +4,7 @@ import { api } from '@/lib/api';
 import { supabase, isSupabaseConfigured } from '@/lib/db';
 import { formatCurrency } from '@/lib/utils';
 import { differenceInDays, parseISO, format } from 'date-fns';
-import { Calendar, DollarSign, BarChart2, Package, Search, PhoneForwarded, LogOut, AlertCircle, ClipboardList, Users, Car, Settings } from 'lucide-react';
+import { Calendar, DollarSign, BarChart2, Package, Search, PhoneForwarded, LogOut, AlertCircle, ClipboardList, Users, Car, Settings, Copy, ExternalLink } from 'lucide-react';
 import { useNavigate } from 'react-router';
 
 export function TenantAdminDashboard() {
@@ -14,6 +14,7 @@ export function TenantAdminDashboard() {
   const navigate = useNavigate();
   
   const [tenantId, setTenantId] = useState<string | null>('t1');
+  const [copiedLink, setCopiedLink] = useState(false);
   
   const loadData = async () => {
     try {
@@ -45,7 +46,7 @@ export function TenantAdminDashboard() {
          } else {
            console.log("Nenhum Lava Jato encontrado para este usuário");
            setErrorMsg(`Você ainda não tem permissão Administrativa. `);
-           setData({ isUnassigned: true, userId: user.id });
+           setData({ isUnassigned: true, userId: user.id, email: user.email });
            return;
          }
       }
@@ -97,9 +98,9 @@ export function TenantAdminDashboard() {
                 
                 <div className="bg-slate-900 border border-slate-700 rounded p-3 mb-2 flex items-center justify-between">
                    <span className="font-mono text-xs select-all text-green-400 break-all">
-                      INSERT INTO public.super_admins (id, email) VALUES ('{data.userId}', '{user?.email || 'tvpopulariptv@gmail.com'}');
+                      INSERT INTO public.super_admins (id, email) VALUES ('{data.userId}', '{data.email || 'tvpopulariptv@gmail.com'}');
                    </span>
-                   <Button variant="secondary" size="sm" className="ml-4 whitespace-nowrap" onClick={() => navigator.clipboard.writeText(`INSERT INTO public.super_admins (id, email) VALUES ('${data.userId}', '${user?.email || 'tvpopulariptv@gmail.com'}');`)}>
+                   <Button variant="secondary" size="sm" className="ml-4 whitespace-nowrap" onClick={() => navigator.clipboard.writeText(`INSERT INTO public.super_admins (id, email) VALUES ('${data.userId}', '${data.email || 'tvpopulariptv@gmail.com'}');`)}>
                       Copiar SQL
                    </Button>
                 </div>
@@ -169,19 +170,51 @@ export function TenantAdminDashboard() {
   
   return (
     <div className="min-h-screen bg-slate-100 flex flex-col font-sans">
-      <header className="bg-slate-900 text-white p-6 shadow-md">
-        <div className="max-w-6xl mx-auto flex justify-between items-center">
-          <div className="flex items-center space-x-3">
-            <span className="font-bold text-xl tracking-tight">{tenant.nome}</span>
-            <Badge variant="success" className="bg-slate-800 text-slate-300 border-none px-2 text-[10px]">ADMIN</Badge>
-          </div>
-          <div className="flex items-center space-x-4">
-            <div className="text-sm text-slate-400">
-              Vence em: <span className="font-bold text-white">{diasRestantes} dias</span>
+      <header className="bg-slate-900 text-white p-4 sm:p-6 shadow-md">
+        <div className="max-w-6xl mx-auto flex flex-col gap-3">
+          <div className="flex flex-row justify-between items-center gap-4">
+            <div className="flex items-center space-x-2 sm:space-x-3 min-w-0">
+              <span className="font-extrabold text-sm sm:text-lg md:text-xl tracking-tight truncate">{tenant.nome}</span>
+              <Badge variant="success" className="bg-slate-800 text-slate-300 border-none px-2 py-0.5 text-[9px] sm:text-[10px] shrink-0 font-medium tracking-wider">ADMIN</Badge>
             </div>
-            <button onClick={handleLogout} className="text-slate-400 hover:text-white transition-colors" title="Sair da Conta">
-              <LogOut className="w-5 h-5" />
-            </button>
+            <div className="flex items-center space-x-3 sm:space-x-4 shrink-0">
+              <div className="text-xs sm:text-sm text-slate-400">
+                Vence em: <span className="font-bold text-white">{diasRestantes}d</span>
+              </div>
+              <button onClick={handleLogout} className="text-slate-400 hover:text-white transition-colors bg-slate-800 hover:bg-slate-700 p-2 rounded-xl" title="Sair da Conta">
+                <LogOut className="w-4 h-4 sm:w-5 sm:h-5" />
+              </button>
+            </div>
+          </div>
+
+          {/* Quick Scheduling Link Widget for Tenant */}
+          <div className="bg-slate-800/40 border border-slate-800 rounded-xl px-3 py-2 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs sm:text-sm mt-1">
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="text-slate-400 font-medium shrink-0">Link de Agendamentos do Cliente:</span>
+              <span className="font-mono text-blue-400 truncate bg-slate-950/40 px-2 py-1 rounded select-all text-xs border border-slate-800/60 font-medium">{`${window.location.origin}/#/${tenant.slug}`}</span>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <button 
+                onClick={() => {
+                  navigator.clipboard.writeText(`${window.location.origin}/#/${tenant.slug}`);
+                  setCopiedLink(true);
+                  setTimeout(() => setCopiedLink(false), 2000);
+                }}
+                className="bg-slate-800 hover:bg-blue-600 border border-slate-700 hover:border-blue-500 text-slate-200 hover:text-white hover:shadow-lg hover:shadow-blue-600/15 py-1 px-3 md:px-3.5 rounded-lg flex items-center gap-1.5 font-semibold text-[11px] h-7.5 transition-all active:scale-95 cursor-pointer"
+              >
+                <Copy className="w-3 h-3" />
+                {copiedLink ? "Copiado!" : "Copiar Link"}
+              </button>
+              <a 
+                href={`${window.location.origin}/#/${tenant.slug}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 hover:text-white py-1 px-3 md:px-3.5 rounded-lg flex items-center gap-1.5 font-semibold text-[11px] h-7.5 transition-all active:scale-95 cursor-pointer"
+              >
+                <ExternalLink className="w-3 h-3" />
+                Visualizar
+              </a>
+            </div>
           </div>
         </div>
       </header>
