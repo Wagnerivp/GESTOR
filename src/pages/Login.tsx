@@ -87,11 +87,8 @@ export function Login() {
           return;
         }
 
-        if (superAdmin) {
-          navigate("/superadmin");
-        } else {
-          navigate("/admin");
-        }
+        // Ambos os cargos agora usam o mesmo link de administração unificado
+        navigate("/admin");
       }
     } catch (err: any) {
       console.error("Exec catch:", err);

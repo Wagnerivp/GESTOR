@@ -2,9 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { Card, Button, Badge, Input } from '@/components/ui/Components';
 import { api } from '@/lib/api';
 import { supabase, isSupabaseConfigured } from '@/lib/db';
-import { formatCurrency } from '@/lib/utils';
-import { differenceInDays, parseISO, format } from 'date-fns';
-import { Calendar, DollarSign, BarChart2, Package, Search, PhoneForwarded, LogOut, AlertCircle, ClipboardList, Users, Car, Settings, Copy, ExternalLink } from 'lucide-react';
+import { formatCurrency, cn } from '@/lib/utils';
+import { differenceInDays, parseISO, format, addDays } from 'date-fns';
+import { Calendar, DollarSign, BarChart2, Package, Search, PhoneForwarded, LogOut, AlertCircle, ClipboardList, Users, Car, Settings, Copy, ExternalLink, ShieldCheck } from 'lucide-react';
 import { useNavigate } from 'react-router';
 
 export function TenantAdminDashboard() {
@@ -14,11 +14,14 @@ export function TenantAdminDashboard() {
   const navigate = useNavigate();
   
   const queryParams = new URLSearchParams(window.location.hash.includes('?') ? window.location.hash.split('?')[1] : '');
-  const initialTenantId = queryParams.get('tenantId') || 't1';
+  const initialTenantId = queryParams.get('tenantId') || '';
   
-  const [tenantId, setTenantId] = useState<string | null>(initialTenantId);
+  const [tenantId, setTenantId] = useState<string | null>(initialTenantId || 't1');
   const [copiedLink, setCopiedLink] = useState(false);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+  const [allTenants, setAllTenants] = useState<any[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [copiedTenantId, setCopiedTenantId] = useState<string | null>(null);
   
   const loadData = async () => {
     try {
@@ -29,6 +32,12 @@ export function TenantAdminDashboard() {
       
       if (!isSupabaseConfigured) {
         setIsSuperAdmin(true);
+        try {
+          const tenantList = await api.getTenants();
+          setAllTenants(tenantList);
+        } catch (e) {
+          console.error("Error loading tenants:", e);
+        }
       }
       
       if (isSupabaseConfigured) {
@@ -48,6 +57,13 @@ export function TenantAdminDashboard() {
 
          if (superAdmin) {
            setIsSuperAdmin(true);
+           try {
+             const tenantList = await api.getTenants();
+             setAllTenants(tenantList);
+           } catch (e) {
+             console.error("Error loading tenants:", e);
+           }
+           
            if (paramTenantId) {
              activeId = paramTenantId;
            } else {
@@ -114,6 +130,13 @@ export function TenantAdminDashboard() {
     }
   }, [window.location.hash]);
 
+  useEffect(() => {
+    const hashParams = new URLSearchParams(window.location.hash.includes('?') ? window.location.hash.split('?')[1] : '');
+    if (isSuperAdmin && !hashParams.get('tenantId')) {
+      setActiveTab('PARCEIROS');
+    }
+  }, [isSuperAdmin]);
+
   if (data?.isUnassigned) {
      return (
         <div className="min-h-screen bg-slate-100 flex items-center justify-center p-6">
@@ -164,7 +187,7 @@ export function TenantAdminDashboard() {
   const diasRestantes = tenant.data_vencimento ? differenceInDays(parseISO(tenant.data_vencimento), new Date()) : 30;
   const isBlocked = tenant.status_assinatura === 'BLOQUEADO' || diasRestantes < 0;
 
-  if (isBlocked) {
+  if (isBlocked && !isSuperAdmin) {
     return (
       <div className="min-h-screen bg-slate-100 flex items-center justify-center p-6">
         <Card className="max-w-md w-full p-8 text-center shadow-lg border-red-200 bg-red-50/10">
@@ -190,6 +213,7 @@ export function TenantAdminDashboard() {
   }
 
   const tabs = [
+    ...(isSuperAdmin ? [{ id: 'PARCEIROS', label: 'Parceiros SaaS', icon: ShieldCheck }] : []),
     { id: 'HORARIOS', label: 'Agendados do Dia', icon: Calendar },
     { id: 'FINANCAS', label: 'Finanças', icon: DollarSign },
     { id: 'TOTAL', label: 'Resumo Mensal', icon: BarChart2 },
@@ -203,37 +227,60 @@ export function TenantAdminDashboard() {
   return (
     <div className="min-h-screen bg-slate-100 flex flex-col font-sans">
       {isSuperAdmin && (
-        <div className="bg-blue-600 text-white text-xs sm:text-sm px-4 py-2 flex justify-between items-center font-semibold shadow-md relative z-20">
+        <div className="bg-blue-600 text-white text-xs sm:text-sm px-4 py-2 flex flex-col sm:flex-row justify-between items-center gap-2 font-semibold shadow-md relative z-20">
           <div className="flex items-center gap-2">
             <span className="bg-blue-800 text-white px-2 py-0.5 rounded text-[10px] uppercase font-black tracking-wider">Gestor Total</span>
-            <span>Você está visualizando o Lava Jato: <strong className="text-white underline">{tenant.nome}</strong></span>
+            <span>Painel de Administração Único — Todos os Lava Jatos & Assinaturas</span>
           </div>
           <button 
-            onClick={() => navigate('/superadmin')} 
-            className="bg-white/10 hover:bg-white/20 px-3 py-1 rounded text-white text-xs font-bold transition-all border border-white/20 cursor-pointer"
+            onClick={() => setActiveTab('PARCEIROS')} 
+            className="bg-white/10 hover:bg-white/20 px-3 py-1 rounded text-white text-xs font-bold transition-all border border-white/20 cursor-pointer flex items-center gap-1 shrink-0"
           >
-            Voltar ao Painel Geral
+            <ShieldCheck className="w-3.5 h-3.5" />
+            Ver Todos os Parceiros SaaS
           </button>
         </div>
       )}
       <header className="bg-slate-900 text-white p-4 sm:p-6 shadow-md">
         <div className="max-w-6xl mx-auto flex flex-col gap-3">
-          <div className="flex flex-row justify-between items-center gap-4">
-            <div className="flex items-center space-x-2 sm:space-x-3 min-w-0">
-              <span className="font-extrabold text-sm sm:text-lg md:text-xl tracking-tight truncate">{tenant.nome}</span>
-              <Badge variant="success" className="bg-slate-800 text-slate-300 border-none px-2 py-0.5 text-[9px] sm:text-[10px] shrink-0 font-medium tracking-wider">ADMIN</Badge>
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3 min-w-0 w-full md:w-auto">
+              <div className="flex items-center space-x-2 sm:space-x-3 shrink-0">
+                <span className="font-extrabold text-sm sm:text-lg md:text-xl tracking-tight truncate">{tenant.nome}</span>
+                <Badge variant="success" className="bg-slate-800 text-slate-300 border-none px-2 py-0.5 text-[9px] sm:text-[10px] shrink-0 font-medium tracking-wider">ADMIN</Badge>
+              </div>
+              
+              {isSuperAdmin && allTenants.length > 0 && (
+                <div className="flex items-center gap-2 shrink-0 bg-slate-950/60 border border-slate-800/80 px-2.5 py-1.5 rounded-xl">
+                  <span className="text-[11px] text-slate-400 font-bold uppercase tracking-wider shrink-0">Ir para outro Lava Jato:</span>
+                  <select 
+                    value={tenantId || ''} 
+                    onChange={(e) => {
+                      const selectedId = e.target.value;
+                      setTenantId(selectedId);
+                      navigate(`/admin?tenantId=${selectedId}`);
+                    }}
+                    className="bg-slate-900 border border-slate-700 text-slate-200 text-xs py-0.5 px-2 rounded font-semibold focus:outline-none focus:ring-1 focus:ring-blue-500 max-w-[180px] sm:max-w-xs cursor-pointer text-ellipsis whitespace-nowrap"
+                  >
+                    {allTenants.map((t) => (
+                      <option key={t.id} value={t.id}>{t.nome}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
             </div>
-            <div className="flex items-center space-x-3 sm:space-x-4 shrink-0">
+            <div className="flex items-center space-x-3 sm:space-x-4 shrink-0 self-end md:self-auto">
               <div className="text-xs sm:text-sm text-slate-400">
                 Vence em: <span className="font-bold text-white">{diasRestantes}d</span>
               </div>
               {isSuperAdmin && (
                 <button 
-                  onClick={() => navigate('/superadmin')} 
-                  className="bg-blue-600 hover:bg-blue-500 text-white px-2.5 py-1.5 rounded-lg text-xs font-black tracking-wide cursor-pointer flex items-center gap-1 shrink-0"
-                  title="Voltar ao Painel Geral"
+                  onClick={() => setActiveTab('PARCEIROS')} 
+                  className="bg-blue-600 hover:bg-blue-500 text-white px-2.5 py-1.5 rounded-lg text-xs font-black tracking-wide cursor-pointer flex items-center gap-1 shrink-0 transition-colors"
+                  title="Acessar painel geral de parceiros"
                 >
-                  PAINEL GERAL
+                  <ShieldCheck className="w-3.5 h-3.5" />
+                  SaaS PARCEIROS
                 </button>
               )}
               <button onClick={handleLogout} className="text-slate-400 hover:text-white transition-colors bg-slate-800 hover:bg-slate-700 p-2 rounded-xl cursor-pointer" title="Sair da Conta">
@@ -287,6 +334,164 @@ export function TenantAdminDashboard() {
             </button>
           ))}
         </div>
+
+        {activeTab === 'PARCEIROS' && isSuperAdmin && (
+          <div className="space-y-6">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+              <div>
+                <h2 className="text-xl font-bold text-slate-900">Gestão de Parceiros SaaS</h2>
+                <p className="text-slate-500 text-xs sm:text-sm mt-0.5">Ativações, renovações e gerenciamento direto de todos os Lava Jatos cadastrados.</p>
+              </div>
+              <div className="w-full sm:w-72 relative">
+                <Search className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
+                <Input 
+                  placeholder="Buscar Lava Jato..." 
+                  className="pl-9 h-10 text-xs sm:text-sm"
+                  value={searchTerm}
+                  onChange={e => setSearchTerm(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {allTenants
+                .filter(t => t.nome.toLowerCase().includes(searchTerm.toLowerCase()))
+                .map((tenantItem) => {
+                  const itemRestantes = tenantItem.data_vencimento ? differenceInDays(parseISO(tenantItem.data_vencimento), new Date()) : 30;
+                  const itemBlocked = tenantItem.status_assinatura === 'BLOQUEADO' || itemRestantes < 0;
+                  const statusVariant = itemBlocked ? 'danger' : (tenantItem.status_assinatura === 'PAGO' ? 'success' : 'warning');
+                  const itemDisplayStatus = itemBlocked ? 'BLOQUEADO' : tenantItem.status_assinatura;
+
+                  return (
+                    <Card key={tenantItem.id} className="p-5 flex flex-col justify-between hover:shadow-md transition-shadow border border-slate-200 bg-white">
+                      <div>
+                        <div className="flex justify-between items-start mb-4">
+                          <div>
+                            <h3 className="font-bold text-slate-900 text-sm sm:text-base">{tenantItem.nome}</h3>
+                            <p className="text-xs text-slate-500">/{tenantItem.slug}</p>
+                          </div>
+                          <Badge variant={statusVariant}>{itemDisplayStatus}</Badge>
+                        </div>
+                        
+                        <div className="mb-6">
+                          <div className="flex justify-between text-xs mb-1">
+                            <span className={itemBlocked ? "text-red-600 font-semibold" : "text-slate-500"}>Expiração</span>
+                            <span className={cn("font-semibold", itemBlocked ? "text-red-700" : "text-slate-700")}>
+                              {itemRestantes < 0 ? 'Vencido' : `${itemRestantes} dias restantes`}
+                            </span>
+                          </div>
+                          <div className={cn("w-full h-2 rounded-full", itemBlocked ? "bg-red-100" : "bg-slate-100")}>
+                            <div 
+                              className={cn("h-2 rounded-full", itemBlocked ? "bg-red-500" : tenantItem.status_assinatura === 'PAGO' ? "bg-green-500" : "bg-blue-500")} 
+                              style={{ width: itemBlocked ? '100%' : `${Math.min(100, Math.max(0, (itemRestantes / 30) * 100))}%` }}
+                            ></div>
+                          </div>
+                        </div>
+                        
+                        <div className="text-xs sm:text-sm text-slate-500 mb-4 space-y-1.5">
+                          <p><strong>Contato:</strong> {tenantItem.telefone_whatsapp || 'Não informado'}</p>
+                          <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200 mt-2">
+                            <p className="text-[10px] text-slate-400 font-semibold mb-1 uppercase tracking-wide">Link de Agendamentos do Cliente:</p>
+                            <div className="flex items-center justify-between gap-1.5 bg-white px-2.5 py-1.5 rounded-lg border border-slate-100 text-[11px] font-mono text-slate-700 min-w-0 mb-2">
+                              <span className="truncate select-all select-none">{`${window.location.origin}/#/${tenantItem.slug}`}</span>
+                              <button 
+                                onClick={() => {
+                                  navigator.clipboard.writeText(`${window.location.origin}/#/${tenantItem.slug}`);
+                                  setCopiedTenantId(tenantItem.id);
+                                  setTimeout(() => setCopiedTenantId(null), 2000);
+                                }}
+                                className="p-1 hover:bg-slate-100 rounded text-slate-400 hover:text-blue-600 transition-colors shrink-0 flex items-center"
+                                title="Copiar Link"
+                              >
+                                {copiedTenantId === tenantItem.id ? "✓" : <Copy className="w-3.5 h-3.5" />}
+                              </button>
+                            </div>
+
+                            <div className="flex items-center gap-1.5 justify-between">
+                              <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => {
+                                  navigator.clipboard.writeText(`${window.location.origin}/#/${tenantItem.slug}`);
+                                  setCopiedTenantId(tenantItem.id);
+                                  setTimeout(() => setCopiedTenantId(null), 2000);
+                                }}
+                                className="h-7 text-[10px] font-bold border-slate-200 rounded-md py-0.5 px-2 hover:bg-slate-100 flex items-center justify-center gap-1 text-slate-600 shrink-0"
+                              >
+                                <Copy className="w-2.5 h-2.5" />
+                                {copiedTenantId === tenantItem.id ? "Copiado!" : "Copiar"}
+                              </Button>
+                              <a 
+                                href={`${window.location.origin}/#/${tenantItem.slug}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="h-7 text-[10px] font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 border border-slate-200 rounded-md py-0.5 px-2 flex items-center justify-center gap-1 transition-colors shrink-0"
+                              >
+                                <ExternalLink className="w-2.5 h-2.5" />
+                                Ver Link
+                              </a>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="space-y-2 mt-auto">
+                        <Button 
+                          className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold h-9 text-xs"
+                          onClick={async () => {
+                            const newDate = addDays(new Date(), 30).toISOString();
+                            try {
+                              await api.updateTenantStatus(tenantItem.id, { status_assinatura: 'PAGO', data_vencimento: newDate });
+                              const updatedList = await api.getTenants();
+                              setAllTenants(updatedList);
+                            } catch (err) {
+                              alert("Erro ao atualizar!");
+                            }
+                          }}
+                        >
+                          {itemBlocked ? 'Reativar Mês (R$ 30)' : 'Ativar Mês (R$ 30)'}
+                        </Button>
+                        <div className="flex space-x-2">
+                          <Button 
+                            variant="secondary" 
+                            className="w-1/2 h-8 text-[11px] font-bold"
+                            onClick={async () => {
+                              const newDate = addDays(new Date(), 30).toISOString();
+                              try {
+                                await api.updateTenantStatus(tenantItem.id, { status_assinatura: 'GRATUITO', data_vencimento: newDate });
+                                const updatedList = await api.getTenants();
+                                setAllTenants(updatedList);
+                              } catch (err) {
+                                alert("Erro ao atualizar!");
+                              }
+                            }}
+                          >
+                            Ativar Teste
+                          </Button>
+                          <Button 
+                            variant="secondary" 
+                            className="w-1/2 bg-slate-200 hover:bg-blue-50 hover:text-blue-700 text-slate-800 border-none transition-all flex items-center justify-center font-bold text-[11px] h-8"
+                            onClick={() => {
+                              setTenantId(tenantItem.id);
+                              navigate(`/admin?tenantId=${tenantItem.id}`);
+                              setActiveTab('HORARIOS');
+                            }}
+                          >
+                            Gerenciar Painel
+                          </Button>
+                        </div>
+                      </div>
+                    </Card>
+                  );
+                })}
+              {allTenants.length === 0 && (
+                <div className="col-span-full text-center py-10 text-slate-500 bg-white rounded-xl border border-slate-200">
+                  Nenhum parceiro encontrado.
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {activeTab === 'HORARIOS' && (
           <div className="space-y-4">
