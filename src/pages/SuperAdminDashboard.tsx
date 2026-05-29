@@ -71,8 +71,8 @@ export function SuperAdminDashboard() {
       <header className="bg-slate-900 text-white p-6 shadow-md">
         <div className="max-w-7xl mx-auto flex justify-between items-center">
           <div className="flex items-center space-x-2">
-            <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center font-bold">W</div>
-            <span className="font-bold text-xl tracking-tight">WashMaster <span className="text-blue-500">PRO</span></span>
+            <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center font-bold">GLJ</div>
+            <span className="font-bold text-xl tracking-tight">gestor <span className="text-blue-500 uppercase font-black">LAVA JATO</span> <span className="text-xs bg-blue-600/20 text-blue-400 border border-blue-500/30 px-2 py-0.5 rounded ml-2 font-mono">ADMINISTRATIVO</span></span>
           </div>
           <div className="flex items-center space-x-4">
             <div className="text-sm text-slate-400">Controle Financeiro e SaaS</div>
