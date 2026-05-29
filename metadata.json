@@ -1,5 +1,5 @@
 {
-  "name": "Gestão Lava Jatos",
+  "name": "gestor LAVA JATO",
   "description": "Sistema completo de agendamento e gerenciamento para lava-jato com suporte a múltiplos inquilinos (SaaS), painel administrativo e autenticação via Supabase.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]

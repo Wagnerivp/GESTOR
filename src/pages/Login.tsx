@@ -18,6 +18,16 @@ export function Login() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!isSupabaseConfigured) {
+      if (email.includes("admin")) {
+        localStorage.setItem('mock_role', 'superadmin');
+      } else {
+        localStorage.setItem('mock_role', 'tenant');
+        if (email.includes("centro")) {
+          localStorage.setItem('mock_tenant_id', 't2');
+        } else {
+          localStorage.setItem('mock_tenant_id', 't1');
+        }
+      }
       navigate("/admin");
       return;
     }
@@ -116,7 +126,7 @@ export function Login() {
             Acessar Sistema
           </h1>
           <p className="text-slate-400 text-xs sm:text-sm mt-1">
-            Entre no painel de Gestão Lava Jatos
+            Entre no painel gestor LAVA JATO
           </p>
           <div className="mt-4 text-[10px] sm:text-xs text-slate-400 bg-slate-950/60 p-2.5 rounded-xl text-left border border-slate-800 max-w-sm mx-auto overflow-hidden">
              <span className="font-bold text-slate-300">Status do Banco:</span><br/>
@@ -127,6 +137,54 @@ export function Login() {
         {errorMsg && (
           <div className="mb-4 bg-red-950/40 text-red-400 text-xs sm:text-[13px] font-medium p-3 rounded-lg border border-red-900/50">
             {errorMsg}
+          </div>
+        )}
+
+        {!isSupabaseConfigured && (
+          <div className="mb-6 p-4 bg-slate-950/60 rounded-2xl border border-slate-800 text-left">
+            <p className="text-xs font-bold text-slate-300 uppercase tracking-wider mb-2.5">💡 Acesso Demonstrativo Rápido:</p>
+            <div className="space-y-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setEmail("admin@gestorlavajato.com");
+                  setPassword("admin123");
+                  localStorage.setItem('mock_role', 'superadmin');
+                }}
+                className={`w-full text-left py-2 px-3 rounded-xl border transition-all text-xs flex justify-between items-center ${email === 'admin@gestorlavajato.com' ? 'bg-blue-600/15 border-blue-500 text-blue-400 font-bold' : 'bg-slate-900/50 border-slate-800/80 text-slate-400 hover:text-slate-200'}`}
+              >
+                <span>👑 Administrativo (Geral)</span>
+                <span className="text-[9px] uppercase font-mono px-1.5 py-0.5 rounded bg-slate-950 border border-slate-800/50">Admin</span>
+              </button>
+              
+              <button
+                type="button"
+                onClick={() => {
+                  setEmail("contato@costaazul.com");
+                  setPassword("empresa123");
+                  localStorage.setItem('mock_role', 'tenant');
+                  localStorage.setItem('mock_tenant_id', 't1');
+                }}
+                className={`w-full text-left py-2 px-3 rounded-xl border transition-all text-xs flex justify-between items-center ${email === 'contato@costaazul.com' ? 'bg-blue-600/15 border-blue-500 text-blue-400 font-bold' : 'bg-slate-900/50 border-slate-800/80 text-slate-400 hover:text-slate-200'}`}
+              >
+                <span>🚗 Minha Empresa (Costa Azul)</span>
+                <span className="text-[9px] uppercase font-mono px-1.5 py-0.5 rounded bg-slate-950 border border-slate-800/50">Costa Azul</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setEmail("contato@centro.com");
+                  setPassword("empresa123");
+                  localStorage.setItem('mock_role', 'tenant');
+                  localStorage.setItem('mock_tenant_id', 't2');
+                }}
+                className={`w-full text-left py-2 px-3 rounded-xl border transition-all text-xs flex justify-between items-center ${email === 'contato@centro.com' ? 'bg-blue-600/15 border-blue-500 text-blue-400 font-bold' : 'bg-slate-900/50 border-slate-800/80 text-slate-400 hover:text-slate-200'}`}
+              >
+                <span>🏢 Minha Empresa (Centro)</span>
+                <span className="text-[9px] uppercase font-mono px-1.5 py-0.5 rounded bg-slate-950 border border-slate-800/50">Centro</span>
+              </button>
+            </div>
           </div>
         )}
 

@@ -22,6 +22,31 @@ export function TenantAdminDashboard() {
   const [allTenants, setAllTenants] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [copiedTenantId, setCopiedTenantId] = useState<string | null>(null);
+
+  // Compartilhamento de link via whatsapp / busca por cliente
+  const [sharePhone, setSharePhone] = useState('');
+  const [shareName, setShareName] = useState('');
+  const [shareSearchQuery, setShareSearchQuery] = useState('');
+  const [shareSelectedCustomer, setShareSelectedCustomer] = useState<any>(null);
+  const [showShareSuccessMsg, setShowShareSuccessMsg] = useState(false);
+
+  const handleSendLink = (method: 'whatsapp' | 'copy') => {
+    if (!sharePhone) {
+      alert("Por favor, digite ou selecione um número de telefone com DDD!");
+      return;
+    }
+    const cleanPhone = sharePhone.replace(/\D/g, '');
+    const message = `Olá *${shareName || 'Cliente'}*, acompanhe seu atendimento e faça novos agendamentos no *${data?.tenant?.nome || 'Lava Jato'}* pelo nosso link exclusivo:\n\n${window.location.origin}/#/${data?.tenant?.slug || 'costa-azul'}`;
+    const encodedMsg = encodeURIComponent(message);
+    
+    if (method === 'whatsapp') {
+      window.open(`https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodedMsg}`, '_blank');
+    } else {
+      navigator.clipboard.writeText(message);
+      setShowShareSuccessMsg(true);
+      setTimeout(() => setShowShareSuccessMsg(false), 3000);
+    }
+  };
   
   const loadData = async () => {
     try {
@@ -32,14 +57,27 @@ export function TenantAdminDashboard() {
       let localIsSuperAdmin = false;
       
       if (!isSupabaseConfigured) {
-        localIsSuperAdmin = true;
-        setIsSuperAdmin(true);
-        try {
-          const tenantList = await api.getTenants();
-          setAllTenants(tenantList);
-        } catch (e) {
-          console.error("Error loading tenants:", e);
+        const mockRole = localStorage.getItem('mock_role') || 'superadmin';
+        if (mockRole === 'superadmin') {
+          localIsSuperAdmin = true;
+          setIsSuperAdmin(true);
+          try {
+            const tenantList = await api.getTenants();
+            setAllTenants(tenantList);
+          } catch (e) {
+            console.error("Error loading tenants:", e);
+          }
+          if (paramTenantId) {
+            activeId = paramTenantId;
+          } else {
+            activeId = tenantId || 't1';
+          }
+        } else {
+          localIsSuperAdmin = false;
+          setIsSuperAdmin(false);
+          activeId = localStorage.getItem('mock_tenant_id') || 't1';
         }
+        setTenantId(activeId);
       }
       
       if (isSupabaseConfigured) {
@@ -330,34 +368,168 @@ export function TenantAdminDashboard() {
             </div>
           </div>
 
-          {/* Quick Scheduling Link Widget for Tenant */}
-          <div className="bg-slate-800/40 border border-slate-800 rounded-xl px-3 py-2 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs sm:text-sm mt-1">
-            <div className="flex items-center gap-2 min-w-0">
-              <span className="text-slate-400 font-medium shrink-0">Link de Agendamentos do Cliente:</span>
-              <span className="font-mono text-blue-400 truncate bg-slate-950/40 px-2 py-1 rounded select-all text-xs border border-slate-800/60 font-medium">{`${window.location.origin}/#/${tenant.slug}`}</span>
+          {/* SEÇÃO COMPARTILHAR LINK COM CLIENTE */}
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-5 mt-4 text-left shadow-xl shadow-slate-950/20">
+            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-3 mb-4 border-b border-slate-800 pb-3">
+              <div>
+                <h3 className="text-sm sm:text-base font-bold text-white flex items-center gap-2">
+                  <PhoneForwarded className="w-4 h-4 text-blue-500 animate-pulse" />
+                  Enviar Link de Agendamentos para Cliente
+                </h3>
+                <p className="text-[11px] sm:text-xs text-slate-400 mt-0.5">
+                  Busque um cliente cadastrado ou digite o telefone para enviar o link de agendamento por WhatsApp.
+                </p>
+              </div>
+              <div className="flex items-center gap-1.5 shrink-0 bg-slate-950/60 p-1.5 rounded-xl border border-slate-800/80 w-full lg:w-auto">
+                <span className="text-[10px] sm:text-xs font-mono text-blue-400 truncate max-w-[180px] xs:max-w-xs select-all bg-slate-905 p-1 px-2 rounded border border-slate-800">{`${window.location.origin}/#/${tenant?.slug}`}</span>
+                <button 
+                  onClick={() => {
+                    navigator.clipboard.writeText(`${window.location.origin}/#/${tenant?.slug}`);
+                    setCopiedLink(true);
+                    setTimeout(() => setCopiedLink(false), 2000);
+                  }}
+                  className="bg-slate-850 hover:bg-slate-800 border border-slate-700 hover:border-slate-600 text-slate-200 hover:text-white font-bold text-[10px] sm:text-xs py-1 px-2.5 rounded-lg transition-all"
+                >
+                  {copiedLink ? "Copiado!" : "Copiar"}
+                </button>
+                <a 
+                  href={`${window.location.origin}/#/${tenant?.slug}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-slate-300 hover:text-white p-1"
+                  title="Visualizar como Cliente"
+                >
+                  <ExternalLink className="w-4 h-4" />
+                </a>
+              </div>
             </div>
-            <div className="flex items-center gap-2 shrink-0">
-              <button 
-                onClick={() => {
-                  navigator.clipboard.writeText(`${window.location.origin}/#/${tenant.slug}`);
-                  setCopiedLink(true);
-                  setTimeout(() => setCopiedLink(false), 2000);
-                }}
-                className="bg-slate-800 hover:bg-blue-600 border border-slate-700 hover:border-blue-500 text-slate-200 hover:text-white hover:shadow-lg hover:shadow-blue-600/15 py-1 px-3 md:px-3.5 rounded-lg flex items-center gap-1.5 font-semibold text-[11px] h-7.5 transition-all active:scale-95 cursor-pointer"
-              >
-                <Copy className="w-3 h-3" />
-                {copiedLink ? "Copiado!" : "Copiar Link"}
-              </button>
-              <a 
-                href={`${window.location.origin}/#/${tenant.slug}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 hover:text-white py-1 px-3 md:px-3.5 rounded-lg flex items-center gap-1.5 font-semibold text-[11px] h-7.5 transition-all active:scale-95 cursor-pointer"
-              >
-                <ExternalLink className="w-3 h-3" />
-                Visualizar
-              </a>
+
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-3.5">
+              {/* BUSCA DE CLIENTES EXISTENTES */}
+              <div className="md:col-span-4 relative">
+                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+                  🔍 Buscar Cliente no Banco
+                </label>
+                <div className="relative">
+                  <Search className="w-3.5 h-3.5 text-slate-500 absolute left-3 top-3.5" />
+                  <input
+                    type="text"
+                    value={shareSearchQuery}
+                    onChange={(e) => {
+                      setShareSearchQuery(e.target.value);
+                      if (shareSelectedCustomer) {
+                        setShareSelectedCustomer(null);
+                      }
+                    }}
+                    placeholder="Nome, telefone ou veículo..."
+                    className="w-full bg-slate-950/80 border border-slate-800 rounded-xl text-xs py-3 pl-9 pr-3 text-slate-200 placeholder-slate-500 focus:outline-none focus:border-blue-500 font-medium"
+                  />
+                  {shareSearchQuery && (
+                    <button 
+                      onClick={() => { setShareSearchQuery(''); setShareSelectedCustomer(null); }}
+                      className="text-slate-500 hover:text-white absolute right-3 top-3.5 text-xs"
+                    >
+                      Limpar
+                    </button>
+                  )}
+                </div>
+
+                {/* Dropdown de sugestões combinando tabela customers e appointments */}
+                {shareSearchQuery.trim() !== '' && !shareSelectedCustomer && (
+                  <div className="absolute left-0 right-0 mt-1.5 bg-slate-950 border border-slate-800 rounded-xl shadow-2xl z-50 max-h-48 overflow-y-auto divide-y divide-slate-800">
+                    {(data?.customers || []).filter((c: any) => 
+                        c.nome?.toLowerCase().includes(shareSearchQuery.toLowerCase()) || 
+                        c.telefone?.includes(shareSearchQuery) ||
+                        (c.placa_veiculo && c.placa_veiculo.toLowerCase().includes(shareSearchQuery.toLowerCase()))
+                      ).map((c: any) => (
+                      <button
+                        key={c.id}
+                        type="button"
+                        onClick={() => {
+                          setShareSelectedCustomer(c);
+                          setShareName(c.nome);
+                          setSharePhone(c.telefone);
+                          setShareSearchQuery(c.nome);
+                        }}
+                        className="w-full text-left p-2.5 hover:bg-slate-900 transition-colors text-xs flex justify-between items-center"
+                      >
+                        <div className="min-w-0">
+                          <p className="font-semibold text-slate-200 truncate">{c.nome}</p>
+                          <p className="text-[10px] text-slate-500">{c.telefone}</p>
+                        </div>
+                        {c.placa_veiculo && (
+                          <span className="text-[9px] font-mono font-black border border-slate-800 px-1.5 py-0.5 rounded bg-slate-900 text-slate-400 shrink-0">
+                            🚘 {c.placa_veiculo}
+                          </span>
+                        )}
+                      </button>
+                    ))}
+                    {(data?.customers || []).filter((c: any) => 
+                        c.nome?.toLowerCase().includes(shareSearchQuery.toLowerCase()) || 
+                        c.telefone?.includes(shareSearchQuery) ||
+                        (c.placa_veiculo && c.placa_veiculo.toLowerCase().includes(shareSearchQuery.toLowerCase()))
+                      ).length === 0 && (
+                      <div className="p-3 text-center text-[10px] text-slate-500">
+                        Nenhum cliente cadastrado correspondente.
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* NOME DO CLIENTE */}
+              <div className="md:col-span-3">
+                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+                  Nome do Cliente
+                </label>
+                <input
+                  type="text"
+                  value={shareName}
+                  onChange={(e) => setShareName(e.target.value)}
+                  placeholder="Carlos Silva"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl text-xs py-3 px-3 text-slate-200 focus:outline-none focus:border-blue-500 font-medium"
+                />
+              </div>
+
+              {/* WHATSAPP */}
+              <div className="md:col-span-3">
+                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+                  📞 Telefone / WhatsApp (com DDD)
+                </label>
+                <input
+                  type="text"
+                  value={sharePhone}
+                  onChange={(e) => setSharePhone(e.target.value)}
+                  placeholder="5511999999999"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl text-xs py-3 px-3 text-slate-200 font-mono focus:outline-none focus:border-blue-500"
+                />
+              </div>
+
+              {/* ENVIAR */}
+              <div className="md:col-span-2 flex flex-row md:flex-col gap-2 justify-end">
+                <button
+                  type="button"
+                  onClick={() => handleSendLink('whatsapp')}
+                  className="w-full bg-emerald-600 hover:bg-emerald-700 hover:shadow-lg hover:shadow-emerald-950/20 text-white font-bold text-xs py-2.5 px-3 rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5 active:scale-95"
+                >
+                  💬 WhatsApp
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleSendLink('copy')}
+                  className="w-full bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs py-2 px-3 rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1 active:scale-95"
+                >
+                  Copiar Texto
+                </button>
+              </div>
             </div>
+
+            {showShareSuccessMsg && (
+              <div className="mt-3 text-xs bg-blue-950/30 border border-blue-900/40 text-blue-400 px-3 py-1.5 rounded-lg flex items-center gap-1.5 justify-center">
+                <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse"></span>
+                Mensagem de convite copiada com sucesso para compartilhar!
+              </div>
+            )}
           </div>
         </div>
       </header>

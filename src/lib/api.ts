@@ -31,18 +31,21 @@ export const api = {
          { data: tenant }, 
          { data: appointments }, 
          { data: inventory },
-         { data: finances }
+         { data: finances },
+         { data: customers }
       ] = await Promise.all([
          supabase!.from('tenants').select('*').eq('id', tenantId).maybeSingle(),
          supabase!.from('appointments').select('*').eq('tenant_id', tenantId),
          supabase!.from('inventory').select('*').eq('tenant_id', tenantId),
-         supabase!.from('finances').select('*').eq('tenant_id', tenantId)
+         supabase!.from('finances').select('*').eq('tenant_id', tenantId),
+         supabase!.from('customers').select('*').eq('tenant_id', tenantId)
       ]);
       return { 
         tenant, 
         appointments: appointments || [], 
         inventory: inventory || [], 
-        finances: finances || [] 
+        finances: finances || [],
+        customers: customers || []
       };
     }
     const store = getLocalData();
@@ -50,7 +53,8 @@ export const api = {
       tenant: store.tenants.find((t: any) => t.id === tenantId),
       appointments: store.appointments.filter((a: any) => a.tenant_id === tenantId),
       inventory: store.inventory.filter((i: any) => i.tenant_id === tenantId),
-      finances: store.finances.filter((f: any) => f.tenant_id === tenantId)
+      finances: store.finances.filter((f: any) => f.tenant_id === tenantId),
+      customers: store.customers ? store.customers.filter((c: any) => c.tenant_id === tenantId) : []
     };
   },
 
