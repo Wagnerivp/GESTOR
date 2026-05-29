@@ -84,55 +84,29 @@ export function LandingPage() {
             Seja bem-vindo ao sistema de controle e agendamento de lava-jatos.
           </p>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-3xl mx-auto w-full">
+          <div className="max-w-md mx-auto w-full">
             {/* Card Administrativo */}
             <Card 
-              className="bg-slate-900/40 border-slate-800/80 hover:border-blue-500/50 hover:bg-slate-900/80 transition-all p-6 sm:p-7 text-left cursor-pointer flex flex-col group rounded-3xl relative overflow-hidden backdrop-blur-sm justify-between"
+              className="bg-slate-900/40 border-slate-800/80 hover:border-blue-500/50 hover:bg-slate-900/80 transition-all p-6 sm:p-8 text-center cursor-pointer flex flex-col group rounded-3xl relative overflow-hidden backdrop-blur-sm"
               onClick={enterAsAdmin}
             >
               <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500/5 rounded-full blur-2xl group-hover:bg-blue-500/10 transition-all duration-500"></div>
-              <div>
-                <div className="bg-slate-950/80 w-12 h-12 rounded-2xl flex items-center justify-center mb-5 border border-slate-800 shadow-inner group-hover:border-blue-500/40 transition-all">
-                  <ShieldCheck className="w-6 h-6 text-blue-500 group-hover:scale-110 transition-transform duration-300" />
+              <div className="flex flex-col items-center">
+                <div className="bg-slate-950/80 w-14 h-14 rounded-2xl flex items-center justify-center mb-6 border border-slate-800 shadow-inner group-hover:border-blue-500/40 transition-all">
+                  <ShieldCheck className="w-7 h-7 text-blue-500 group-hover:scale-110 transition-transform duration-300" />
                 </div>
-                <h3 className="text-lg sm:text-xl font-extrabold text-white mb-2">
-                  Administrativo
+                <h3 className="text-lg sm:text-xl font-extrabold text-white mb-3">
+                  Painel Administrativo Mestre
                 </h3>
-                <p className="text-slate-400 text-xs sm:text-[13px] mb-6 leading-relaxed">
-                  Acesso mestre de dono da plataforma para gerenciar parceiros, ativar planos e visualizar relatórios SaaS.
+                <p className="text-slate-400 text-xs sm:text-[13px] mb-8 leading-relaxed max-w-sm">
+                  Acesso mestre do dono da plataforma para gerenciar parceiros, ativar planos e controlar todas as assinaturas dos donos dos lava jatos.
                 </p>
               </div>
               <Button 
-                variant="outline" 
-                className="w-full bg-slate-950 text-slate-300 border-slate-800 group-hover:border-blue-500/40 group-hover:text-white group-hover:bg-blue-600/15 h-11 text-xs font-bold rounded-xl transition-all"
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white h-12 text-xs sm:text-sm font-bold rounded-xl transition-all shadow-lg shadow-blue-500/20 hover:shadow-blue-500/30"
                 onClick={(e) => { e.stopPropagation(); enterAsAdmin(); }}
               >
-                Acessar Administrativo
-              </Button>
-            </Card>
-
-            {/* Card Minha Empresa */}
-            <Card 
-              className="bg-slate-900/40 border-slate-800/80 hover:border-emerald-500/50 hover:bg-slate-900/80 transition-all p-6 sm:p-7 text-left cursor-pointer flex flex-col group rounded-3xl relative overflow-hidden backdrop-blur-sm justify-between"
-              onClick={enterAsCompany}
-            >
-              <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500/5 rounded-full blur-2xl group-hover:bg-emerald-500/10 transition-all duration-500"></div>
-              <div>
-                <div className="bg-slate-950/80 w-12 h-12 rounded-2xl flex items-center justify-center mb-5 border border-slate-800 shadow-inner group-hover:border-emerald-500/40 transition-all">
-                  <Store className="w-6 h-6 text-emerald-500 group-hover:scale-110 transition-transform duration-300" />
-                </div>
-                <h3 className="text-lg sm:text-xl font-extrabold text-white mb-2">
-                  Minha Empresa
-                </h3>
-                <p className="text-slate-400 text-xs sm:text-[13px] mb-6 leading-relaxed">
-                  Acesse o painel do seu Lava Jato. Controle horários agendados, finanças, fluxo diário, estoque e envie links aos clientes.
-                </p>
-              </div>
-              <Button 
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white h-11 text-xs font-bold rounded-xl shadow-lg shadow-blue-500/20 hover:shadow-blue-500/30 transition-all"
-                onClick={(e) => { e.stopPropagation(); enterAsCompany(); }}
-              >
-                Acessar Minha Empresa
+                Acessar Meu Painel Administrativo
               </Button>
             </Card>
           </div>
