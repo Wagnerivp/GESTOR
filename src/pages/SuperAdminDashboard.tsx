@@ -132,22 +132,21 @@ export function SuperAdminDashboard() {
                       ></div>
                     </div>
                   </div>
-                  
-                  <div className="text-sm text-slate-500 mb-4 space-y-2">
+                                <div className="text-sm text-slate-500 mb-4 space-y-2">
                     <p><strong>Contato:</strong> {tenant.telefone_whatsapp}</p>
                     <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200 mt-2">
-                      <p className="text-xs text-slate-400 font-semibold mb-1">Link de Agendamento:</p>
+                      <p className="text-xs text-slate-400 font-semibold mb-1">Acesso do Proprietário (Painel):</p>
                       <div className="flex items-center justify-between gap-2 bg-white px-2.5 py-1.5 rounded-lg border border-slate-100 text-[12px] font-mono font-medium text-slate-700 min-w-0">
-                        <span className="truncate select-all select-none">{`${window.location.origin}/#/${tenant.slug}`}</span>
+                        <span className="truncate select-all select-none">{`${window.location.origin}/#/login`}</span>
                         <div className="flex items-center gap-1 shrink-0">
                           <button 
                             onClick={() => {
-                              navigator.clipboard.writeText(`${window.location.origin}/#/${tenant.slug}`);
+                              navigator.clipboard.writeText(`${window.location.origin}/#/login`);
                               setCopiedId(tenant.id);
                               setTimeout(() => setCopiedId(null), 2000);
                             }}
                             className="p-1 hover:bg-slate-100 rounded text-slate-400 hover:text-blue-500 transition-colors flex items-center"
-                            title="Copiar Link"
+                            title="Copiar Link de Login"
                           >
                             {copiedId === tenant.id ? (
                               <span className="text-[10px] text-green-600 font-sans font-bold">✓ Copiado</span>
@@ -156,39 +155,39 @@ export function SuperAdminDashboard() {
                             )}
                           </button>
                           <a 
-                            href={`${window.location.origin}/#/${tenant.slug}`} 
+                            href={`${window.location.origin}/#/login`} 
                             target="_blank" 
                             rel="noopener noreferrer"
                             className="p-1 hover:bg-slate-100 rounded text-slate-400 hover:text-blue-500 transition-colors"
-                            title="Visualizar Página do Cliente"
+                            title="Visualizar Tela de Login"
                           >
                             <ExternalLink className="w-3.5 h-3.5" />
                           </a>
                         </div>
                       </div>
 
-                      {/* Prominent direct copy and share button */}
+                      {/* Prominent direct copy and share button with partner panel email instructions */}
                       <div className="grid grid-cols-2 gap-2 mt-2">
                         <Button
                           type="button"
                           variant="outline"
                           onClick={() => {
-                            navigator.clipboard.writeText(`${window.location.origin}/#/${tenant.slug}`);
+                            navigator.clipboard.writeText(`${window.location.origin}/#/login`);
                             setCopiedId(tenant.id);
                             setTimeout(() => setCopiedId(null), 2000);
                           }}
                           className="h-8 text-[11px] font-bold border-slate-200 rounded-lg py-1 hover:bg-slate-100 flex items-center justify-center gap-1"
                         >
                           <Copy className="w-3 h-3" />
-                          {copiedId === tenant.id ? "Copiado!" : "Copiar Link"}
+                          {copiedId === tenant.id ? "Copiado!" : "Copiar Login"}
                         </Button>
                         <a
                           href={`https://api.whatsapp.com/send?phone=${tenant.telefone_whatsapp ? tenant.telefone_whatsapp.replace(/\D/g, '') : ''}&text=${encodeURIComponent(
-                            `Olá! Segue o link de agendamentos do seu Lava Jato:\n\n${window.location.origin}/#/${tenant.slug}`
+                            `Olá! Segue o link de acesso administrativo para o painel de gerenciamento do seu Lava Jato (*${tenant.nome}*):\n\n${window.location.origin}/#/login`
                           )}`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="h-8 text-[11px] font-bold bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-700 rounded-lg flex items-center justify-center gap-1 transition-colors"
+                          className="h-8 text-[11px] font-bold bg-emerald-550 hover:bg-emerald-100 border border-emerald-200 text-emerald-700 rounded-lg flex items-center justify-center gap-1 transition-colors"
                         >
                           <svg className="w-3 h-3 fill-current" viewBox="0 0 24 24">
                             <path d="M12.012 2c-5.506 0-9.989 4.478-9.99 9.984a9.96 9.96 0 001.333 4.993L2 22l5.13-1.347a9.914 9.914 0 004.882 1.28c5.505 0 9.989-4.478 9.99-9.984A10.046 10.046 0 0012.012 2zm5.72 14.12c-.25.703-1.455 1.298-2 .138-.545-.16-1.246-.484-2.112-.857-3.722-1.603-6.13-5.385-6.315-5.632-.186-.247-1.516-2.015-1.516-3.843 0-1.828.958-2.73 1.3-3.1.341-.37.743-.464.991-.464l.712.003c.217.007.45.105.7.705.25.6.853 2.073.931 2.228.077.155.124.34.02.553-.1.21-.155.34-.31.52-.15.18-.32.404-.46.545-.15.15-.31.32-.138.62.17.3.754 1.243 1.616 2.01.112.1.21.2.3.284 1.11 1.01 2.183 1.245 2.524 1.348.34.1.543.05.744-.18.2-.23.856-1.01 1.085-1.35.228-.34.46-.285.776-.17.316.115 2.01.95 2.35 1.11.34.16.57.24.65.38.08.14.08.81-.17 1.513z"/>

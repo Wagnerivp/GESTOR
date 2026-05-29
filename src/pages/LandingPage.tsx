@@ -84,7 +84,7 @@ export function LandingPage() {
             Seja bem-vindo ao sistema de controle e agendamento de lava-jatos.
           </p>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto w-full">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-3xl mx-auto w-full">
             {/* Card Administrativo */}
             <Card 
               className="bg-slate-900/40 border-slate-800/80 hover:border-blue-500/50 hover:bg-slate-900/80 transition-all p-6 sm:p-7 text-left cursor-pointer flex flex-col group rounded-3xl relative overflow-hidden backdrop-blur-sm justify-between"
@@ -99,7 +99,7 @@ export function LandingPage() {
                   Administrativo
                 </h3>
                 <p className="text-slate-400 text-xs sm:text-[13px] mb-6 leading-relaxed">
-                  Acesso mestre para visualizar todos os clientes, ativação de planos de parceiros e relatórios gerais.
+                  Acesso mestre de dono da plataforma para gerenciar parceiros, ativar planos e visualizar relatórios SaaS.
                 </p>
               </div>
               <Button 
@@ -133,45 +133,6 @@ export function LandingPage() {
                 onClick={(e) => { e.stopPropagation(); enterAsCompany(); }}
               >
                 Acessar Minha Empresa
-              </Button>
-            </Card>
-
-            {/* Card Cliente */}
-            <Card 
-              className="bg-slate-900/40 border-slate-800/80 hover:border-amber-500/50 hover:bg-slate-900/80 transition-all p-6 sm:p-7 text-left flex flex-col group rounded-3xl relative overflow-hidden backdrop-blur-sm justify-between"
-            >
-              <div className="absolute top-0 right-0 w-24 h-24 bg-amber-500/5 rounded-full blur-2xl group-hover:bg-amber-500/10 transition-all duration-500"></div>
-              <div>
-                <div className="bg-slate-950/80 w-12 h-12 rounded-2xl flex items-center justify-center mb-5 border border-slate-800 shadow-inner group-hover:border-amber-500/40 transition-all">
-                  <UserCircle className="w-6 h-6 text-amber-500 group-hover:scale-110 transition-transform duration-300" />
-                </div>
-                <h3 className="text-lg sm:text-xl font-extrabold text-white mb-2">
-                  Cliente
-                </h3>
-                <p className="text-slate-400 text-xs sm:text-[13px] mb-4 leading-relaxed">
-                  Agende sua lavagem pelo link exclusivo enviado pelo Lava Jato, ou selecione uma empresa parceira abaixo:
-                </p>
-
-                {tenants.length > 0 && (
-                  <div className="mb-5">
-                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Sugestões de Lava Jatos:</label>
-                    <select
-                      value={selectedTenantSlug}
-                      onChange={(e) => setSelectedTenantSlug(e.target.value)}
-                      className="w-full bg-slate-950 border border-slate-800 rounded-xl text-slate-200 text-xs py-2 px-3 font-semibold focus:outline-none focus:ring-1 focus:ring-amber-500 cursor-pointer"
-                    >
-                      {tenants.map((t) => (
-                        <option key={t.id} value={t.slug}>{t.nome}</option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-              </div>
-              <Button 
-                className="w-full bg-amber-600 hover:bg-amber-700 text-white h-11 text-xs font-bold rounded-xl shadow-lg shadow-amber-500/20 hover:shadow-amber-500/30 transition-all flex items-center justify-center gap-1 cursor-pointer"
-                onClick={enterAsCustomer}
-              >
-                Acessar como Cliente <ArrowRight className="w-3.5 h-3.5" />
               </Button>
             </Card>
           </div>
