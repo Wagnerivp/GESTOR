@@ -18,7 +18,6 @@ export function Login() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!isSupabaseConfigured) {
-      alert("Modo Mock: Login bypass automático ativado para /admin");
       navigate("/admin");
       return;
     }

@@ -15,6 +15,7 @@ export function CustomerApp() {
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
   const [logistica, setLogistica] = useState('Levo na loja');
+  const [validationError, setValidationError] = useState<string | null>(null);
 
   useEffect(() => {
     api.getTenantBySlug(slug || '').then(found => {
@@ -59,9 +60,10 @@ export function CustomerApp() {
 
   const handleBooking = () => {
     if (!nome || !telefone || selectedServices.length === 0 || !selectedTime) {
-      alert("Preencha todos os campos e escolha um serviço/horário.");
+      setValidationError("Preencha todos os campos e escolha um serviço/horário.");
       return;
     }
+    setValidationError(null);
     
     // Calcula previsao = agora + 2h para demo, ou hora selecionada + 2h
     const [h, m] = selectedTime.split(':');
@@ -87,6 +89,11 @@ export function CustomerApp() {
       </header>
 
       <main className="max-w-md mx-auto p-4 -mt-6 space-y-4">
+        {validationError && (
+          <div className="bg-red-50 text-red-600 border border-red-200 p-3.5 rounded-2xl text-[13px] font-semibold">
+            {validationError}
+          </div>
+        )}
         <Card className="p-5">
           <h2 className="font-bold text-slate-800 mb-4 flex items-center text-[15px]"><CheckCircle className="w-4 h-4 mr-2 text-blue-600" /> Seus Dados</h2>
           <div className="space-y-3">

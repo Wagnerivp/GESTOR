@@ -29,8 +29,10 @@ export function TenantAdminDashboard() {
       const paramTenantId = urlParams.get('tenantId');
       let activeId = paramTenantId || tenantId || 't1';
       setErrorMsg(null);
+      let localIsSuperAdmin = false;
       
       if (!isSupabaseConfigured) {
+        localIsSuperAdmin = true;
         setIsSuperAdmin(true);
         try {
           const tenantList = await api.getTenants();
@@ -56,6 +58,7 @@ export function TenantAdminDashboard() {
            .maybeSingle();
 
          if (superAdmin) {
+           localIsSuperAdmin = true;
            setIsSuperAdmin(true);
            try {
              const tenantList = await api.getTenants();
@@ -71,9 +74,12 @@ export function TenantAdminDashboard() {
              const { data: firstTenant } = await supabase!.from('tenants').select('id').limit(1).maybeSingle();
              if (firstTenant) {
                activeId = firstTenant.id;
+             } else {
+               activeId = '';
              }
            }
          } else {
+           localIsSuperAdmin = false;
            setIsSuperAdmin(false);
            // Buscar o tenant pertencente a este Owner
            const { data: userTenant, error: extErr } = await supabase!.from('tenants').select('id, nome').eq('owner_id', user.id).maybeSingle();
@@ -99,10 +105,45 @@ export function TenantAdminDashboard() {
          }
       }
 
-      if (!activeId) return;
+      if (!activeId) {
+        if (localIsSuperAdmin) {
+          setData({
+            tenant: {
+              id: 'placeholder',
+              nome: 'Sistema Geral',
+              slug: 'sistema-geral',
+              status_assinatura: 'GRATUITO',
+              data_vencimento: new Date().toISOString()
+            },
+            appointments: [],
+            inventory: [],
+            finances: []
+          });
+          setTenantId('');
+          return;
+        } else {
+          return;
+        }
+      }
 
       const adminData = await api.getTenantAdminData(activeId);
       if (!adminData.tenant) {
+         if (localIsSuperAdmin) {
+           setData({
+             tenant: {
+               id: 'placeholder',
+               nome: 'Sistema Geral',
+               slug: 'sistema-geral',
+               status_assinatura: 'GRATUITO',
+               data_vencimento: new Date().toISOString()
+             },
+             appointments: [],
+             inventory: [],
+             finances: []
+           });
+           setTenantId('');
+           return;
+         }
          setErrorMsg("Erro ao carregar dados. O Lava Jato pode ter sido deletado.");
          return;
       }
@@ -444,8 +485,8 @@ export function TenantAdminDashboard() {
                               await api.updateTenantStatus(tenantItem.id, { status_assinatura: 'PAGO', data_vencimento: newDate });
                               const updatedList = await api.getTenants();
                               setAllTenants(updatedList);
-                            } catch (err) {
-                              alert("Erro ao atualizar!");
+                            } catch (err: any) {
+                              setErrorMsg("Erro ao atualizar status do Lava Jato!");
                             }
                           }}
                         >
@@ -461,8 +502,8 @@ export function TenantAdminDashboard() {
                                 await api.updateTenantStatus(tenantItem.id, { status_assinatura: 'GRATUITO', data_vencimento: newDate });
                                 const updatedList = await api.getTenants();
                                 setAllTenants(updatedList);
-                              } catch (err) {
-                                alert("Erro ao atualizar!");
+                              } catch (err: any) {
+                                setErrorMsg("Erro ao atualizar status do Lava Jato!");
                               }
                             }}
                           >

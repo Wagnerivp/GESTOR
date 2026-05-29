@@ -50,7 +50,7 @@ export function SuperAdminDashboard() {
       await api.updateTenantStatus(id, { status_assinatura: 'PAGO', data_vencimento: newDate });
       loadData();
     } catch (err) {
-      alert("Erro ao atualizar no banco de dados (Verifique as políticas de RLS).");
+      console.error("Erro ao atualizar no banco de dados (Verifique as políticas de RLS).", err);
     }
   };
 
@@ -60,7 +60,7 @@ export function SuperAdminDashboard() {
       await api.updateTenantStatus(id, { status_assinatura: 'GRATUITO', data_vencimento: newDate });
       loadData();
     } catch (err) {
-      alert("Erro ao atualizar no banco de dados (Verifique as políticas de RLS).");
+      console.error("Erro ao atualizar no banco de dados (Verifique as políticas de RLS).", err);
     }
   };
 
