@@ -722,7 +722,13 @@ export const api = {
   async deleteCustomer(id: string) {
     if (isSupabaseConfigured) {
       try {
-        await supabase!.from('customers').delete().eq('id', id);
+        const { error } = await supabase!.from('customers').delete().eq('id', id);
+        if (error) {
+           if (error.message?.includes('row-level security') || error.code === '42501') {
+             alert("Aviso de Banco de Dados: O Supabase bloqueou a exclusão. Clique no botão superior 'BANCO DE DADOS', copie o comando e rode no SQL Editor.");
+           }
+           console.warn("Supabase issue deleting customer:", error);
+        }
       } catch (e) {
         console.warn("Supabase issue deleting customer:", e);
       }
@@ -749,6 +755,70 @@ export const api = {
   async deleteVehicle(id: string) {
     const data = getLocalData();
     data.vehicles = (data.vehicles || []).filter((v: any) => v.id !== id);
+    saveLocalData(data);
+  },
+
+  async getTeamMembers(tenantId: string) {
+    if (isSupabaseConfigured) {
+      try {
+        const { data, error } = await supabase!.from('team_members').select('*').eq('tenant_id', tenantId);
+        if (!error && data) return data;
+      } catch (e) { console.warn("Supabase team_members error:", e); }
+    }
+    const data = getLocalData();
+    return (data.team_members || []).filter((t: any) => t.tenant_id === tenantId);
+  },
+
+  async saveTeamMember(payload: any) {
+    if (isSupabaseConfigured) {
+      if (payload.id && !payload.id.startsWith('tm_')) {
+        try {
+          const { data, error } = await supabase!.from('team_members').update(payload).eq('id', payload.id).select().maybeSingle();
+          if (!error && data) return data;
+        } catch (e) { console.warn(e); }
+      } else {
+        const dbPayload = { ...payload };
+        delete dbPayload.id;
+        try {
+          const { data, error } = await supabase!.from('team_members').insert([dbPayload]).select().maybeSingle();
+          if (!error && data) return data;
+        } catch (e) {
+           if (e.message?.includes('could not find the') || e.code === 'PGRST204' || e.code === '42P01') {
+             throw new Error("A tabela team_members não existe. Vá em Configurações Supabase e rode o script.");
+           }
+           throw e;
+        }
+      }
+    }
+    const data = getLocalData();
+    data.team_members = data.team_members || [];
+    if (payload.id) {
+       data.team_members = data.team_members.map((t: any) => t.id === payload.id ? { ...t, ...payload } : t);
+       saveLocalData(data);
+       return payload;
+    } else {
+       const newMember = { ...payload, id: 'tm_' + Date.now(), created_at: new Date().toISOString() };
+       data.team_members.push(newMember);
+       saveLocalData(data);
+       return newMember;
+    }
+  },
+
+  async deleteTeamMember(id: string) {
+    if (isSupabaseConfigured) {
+      try {
+        const { error } = await supabase!.from('team_members').delete().eq('id', id);
+        if (error) {
+           if (error.message?.includes('row-level security') || error.code === '42501') {
+             alert("Aviso de Banco de Dados: O Supabase bloqueou a exclusão. Para resolver, clique no botão superior 'BANCO DE DADOS' (DB SCRIPT), copie o comando e rode no SQL Editor.");
+           } else {
+             throw error;
+           }
+        }
+      } catch (e) { console.warn(e); }
+    }
+    const data = getLocalData();
+    data.team_members = (data.team_members || []).filter((t: any) => t.id !== id);
     saveLocalData(data);
   },
 
@@ -807,7 +877,13 @@ export const api = {
   async deleteInventory(id: string) {
     if (isSupabaseConfigured) {
       try {
-        await supabase!.from('inventory').delete().eq('id', id);
+        const { error } = await supabase!.from('inventory').delete().eq('id', id);
+        if (error) {
+           if (error.message?.includes('row-level security') || error.code === '42501') {
+             alert("Aviso de Banco de Dados: O Supabase bloqueou a exclusão do estoque. Para resolver, clique no botão superior 'BANCO DE DADOS' (DB SCRIPT), copie o comando e rode no SQL Editor.");
+           }
+           console.warn("Supabase issue deleting inventory:", error);
+        }
       } catch (e) {
         console.warn("Supabase issue deleting inventory:", e);
       }

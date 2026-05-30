@@ -6,7 +6,7 @@ import { getLocalData, saveLocalData } from '@/lib/store';
 import { formatCurrency, cn, getFriendlyUrl, formatBRPhone } from '@/lib/utils';
 import { differenceInDays, parseISO, format, addDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Calendar, DollarSign, BarChart2, Package, Search, PhoneForwarded, LogOut, AlertCircle, ClipboardList, Users, Car, Settings, Copy, ExternalLink, ShieldCheck, Plus, Trash2, Edit, ChevronLeft, Save, Clock, PauseCircle, PlayCircle, CheckCircle, Star, X } from 'lucide-react';
+import { Calendar, DollarSign, BarChart2, Package, Search, PhoneForwarded, LogOut, AlertCircle, ClipboardList, Users, Car, Settings, Copy, ExternalLink, ShieldCheck, Plus, Trash2, Edit, ChevronLeft, Save, Clock, PauseCircle, PlayCircle, CheckCircle, Star, X, DatabaseZap, Briefcase } from 'lucide-react';
 import { PieChart, Pie, Cell, Tooltip as RechartsTooltip, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Legend } from 'recharts';
 
 const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
@@ -55,8 +55,15 @@ export function TenantAdminDashboard() {
   const [editingPrevisaoId, setEditingPrevisaoId] = useState<string | null>(null);
   const [newPrevisaoTime, setNewPrevisaoTime] = useState('');
   
+  const [showDbConfig, setShowDbConfig] = useState(false);
   const [showCustomerForm, setShowCustomerForm] = useState(false);
   const [activeCustomer, setActiveCustomer] = useState<any | null>(null);
+  
+  const [teamMembers, setTeamMembers] = useState<any[]>([]);
+  const [showTeamForm, setShowTeamForm] = useState(false);
+  const [editingTeamMember, setEditingTeamMember] = useState<any | null>(null);
+  const [teamFields, setTeamFields] = useState({ nome: '', telefone: '', funcao: 'Lavador', ativo: true });
+
   const [customerFieldNome, setCustomerFieldNome] = useState('');
   const [customerFieldTelefone, setCustomerFieldTelefone] = useState('');
   const [customerFieldEndereco, setCustomerFieldEndereco] = useState('');
@@ -202,7 +209,7 @@ export function TenantAdminDashboard() {
       await loadData();
     } catch(err: any) {
       if (err.message?.includes('row-level security') || err.code === '42501') {
-         alert("Aviso RLS (Segurança de Banco de Dados):\n\nPara liberar a inserção de receitas no Supabase, copie e execute este comando no 'SQL Editor' do seu painel do Supabase:\n\nDROP POLICY IF EXISTS \"Tenant full access finances\" ON public.finances;\nCREATE POLICY \"Tenant full access finances\" ON public.finances FOR ALL USING (true) WITH CHECK (true);\n\nOu garanta que seu usuário atual é o DONO deste Lava Jato ou Super Admin.");
+         alert("Aviso de Banco de Dados: O Supabase bloqueou a inserção Financeira por falta de permissões (RLS).\n\nPara resolver isso de uma vez por todas, clique no botão superior 'BANCO DE DADOS' (DB SCRIPT), copie o script fornecido e execute no SQL Editor do seu Supabase.");
       } else {
          alert('Erro ao confirmar receita: ' + err.message);
       }
@@ -215,7 +222,11 @@ export function TenantAdminDashboard() {
       await api.deleteFinanceRecord(id);
       await loadData();
     } catch(err: any) {
-      alert('Erro: ' + err.message);
+      if (err.message?.includes('row-level security') || err.code === '42501') {
+         alert("Aviso de Banco de Dados: O Supabase bloqueou a exclusão. Para resolver, clique no botão superior 'BANCO DE DADOS', copie o comando e rode no SQL Editor.");
+      } else {
+         alert('Erro: ' + err.message);
+      }
     }
   };
 
@@ -270,7 +281,7 @@ export function TenantAdminDashboard() {
           const remains = freshData.customers?.some((c: any) => c.id === id);
           if (remains) {
             alert(
-              "Aviso RLS (Segurança de Banco de Dados):\n\nO cliente foi removido localmente, mas continua gravado no banco de dados Supabase porque seu schema está sem a regra de exclusão (Policy RLS).\n\nPara liberar a exclusão completa, copie e execute este comando no 'SQL Editor' do seu painel do Supabase:\n\nCREATE POLICY \"Tenant delete access customers\" ON public.customers FOR DELETE USING (\n  EXISTS (SELECT 1 FROM public.tenants WHERE id = tenant_id AND owner_id = auth.uid()) OR public.is_super_admin(auth.uid())\n);"
+              "Aviso de Banco de Dados: O Supabase bloqueou a exclusão por falta de permissões (RLS).\n\nPara resolver isso de uma vez por todas, clique no botão superior 'BANCO DE DADOS' (DB SCRIPT), copie o script fornecido e execute no SQL Editor do seu Supabase."
             );
           }
         } catch (e) {
@@ -850,10 +861,41 @@ export function TenantAdminDashboard() {
       
       setData(adminData);
       setTenantId(activeId);
+
+      // Load Team Members
+      const members = await api.getTeamMembers(activeId);
+      setTeamMembers(members);
     } catch (e: any) {
       console.error("Exception loading data:", e);
       setErrorMsg(e.message || "Ocorreu um erro inesperado.");
     }
+  };
+
+  const handleSaveTeamMember = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!teamFields.nome || !tenantId) return;
+    try {
+      await api.saveTeamMember({
+        id: editingTeamMember?.id,
+        tenant_id: tenantId,
+        nome: teamFields.nome.trim(),
+        telefone: teamFields.telefone.trim(),
+        funcao: teamFields.funcao,
+        ativo: teamFields.ativo
+      });
+      setShowTeamForm(false);
+      setEditingTeamMember(null);
+      setTeamFields({ nome: '', telefone: '', funcao: 'Lavador', ativo: true });
+      await loadData();
+    } catch(err: any) { alert(err.message); }
+  };
+
+  const handleDeleteTeamMember = async (id: string) => {
+    if(!confirm("Deseja realmente excluir este funcionário?")) return;
+    try {
+      await api.deleteTeamMember(id);
+      await loadData();
+    } catch(err: any) { alert(err.message); }
   };
 
   const handleLogout = async () => {
@@ -976,6 +1018,7 @@ export function TenantAdminDashboard() {
     { id: 'ESTOQUE', label: 'Estoque', icon: Package },
     { id: 'SERVICOS', label: 'Serviços', icon: Settings },
     { id: 'CADASTROS', label: 'Cadastros', icon: ClipboardList },
+    { id: 'FUNCIONARIOS', label: 'Funcionários / Time', icon: Briefcase },
     { id: 'FIDELIDADE', label: 'Estatísticas do Cliente', icon: Star },
   ];
 
@@ -1133,6 +1176,16 @@ export function TenantAdminDashboard() {
                 >
                   <ShieldCheck className="w-3.5 h-3.5" />
                   SaaS PARCEIROS
+                </button>
+              )}
+              {isSupabaseConfigured && (
+                <button
+                  onClick={() => setShowDbConfig(true)}
+                  className="hidden sm:flex text-[10px] items-center gap-1 font-bold px-3 py-1.5 rounded-lg border bg-blue-900/40 text-blue-300 border-blue-500/30 hover:bg-blue-800/60"
+                  title="Configurações Supabase"
+                >
+                  <Settings className="w-3.5 h-3.5" />
+                  BANCO DE DADOS
                 </button>
               )}
               <button onClick={handleLogout} className="text-slate-400 hover:text-white transition-colors bg-slate-800 hover:bg-slate-700 p-2 rounded-xl cursor-pointer" title="Sair da Conta">
@@ -1602,7 +1655,7 @@ export function TenantAdminDashboard() {
                                 loadData();
                               } catch (e: any) {
                                 if (e.message?.includes('row-level security') || e.code === '42501') {
-                                  alert("Aviso RLS: Para liberar a exclusão no Supabase, execute este comando no SQL Editor:\n\nCREATE POLICY \"Tenant delete access appointments\" ON public.appointments FOR DELETE USING (EXISTS (SELECT 1 FROM public.tenants WHERE id = tenant_id AND owner_id = auth.uid()) OR public.is_super_admin(auth.uid()));");
+                                  alert("Aviso de Banco de Dados: O Supabase bloqueou a exclusão por falta de permissões (RLS).\n\nPara resolver isso de uma vez por todas, clique no botão superior 'BANCO DE DADOS' (DB SCRIPT), copie o script fornecido e execute no SQL Editor do seu Supabase.");
                                 } else {
                                   alert("Erro ao deletar: " + e.message);
                                 }
@@ -3380,6 +3433,100 @@ export function TenantAdminDashboard() {
           </div>
         )}
 
+        {activeTab === 'FUNCIONARIOS' && (
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-bold text-slate-900">Gerenciar Equipe</h2>
+              <Button onClick={() => setShowTeamForm(!showTeamForm)} className="bg-blue-600 hover:bg-blue-700 text-white font-bold h-9">
+                {showTeamForm ? 'Cancear' : <><Plus className="w-4 h-4 mr-1"/> Adicionar Funcionário</>}
+              </Button>
+            </div>
+
+            {showTeamForm && (
+              <Card className="p-6 border-slate-200">
+                 <h3 className="font-bold text-slate-800 text-[15px] mb-4">
+                   {editingTeamMember ? 'Editar Funcionário' : 'Novo Funcionário'}
+                 </h3>
+                 <form onSubmit={handleSaveTeamMember} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                   <div>
+                     <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Nome Completo</label>
+                     <Input required value={teamFields.nome} onChange={e => setTeamFields({...teamFields, nome: e.target.value})} className="bg-white border-slate-200" placeholder="João da Silva" />
+                   </div>
+                   <div>
+                     <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Telefone (Opcional)</label>
+                     <Input value={teamFields.telefone} onChange={e => setTeamFields({...teamFields, telefone: e.target.value})} className="bg-white border-slate-200" placeholder="(21) 99999-9999" />
+                   </div>
+                   <div>
+                     <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Função / Cargo</label>
+                     <select value={teamFields.funcao} onChange={e => setTeamFields({...teamFields, funcao: e.target.value})} className="flex h-10 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm ring-offset-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50">
+                        <option value="Lavador">Lavador</option>
+                        <option value="Polidor">Polidor</option>
+                        <option value="Secador">Secador</option>
+                        <option value="Atendente">Atendente</option>
+                        <option value="Motorista/Leva e Traz">Motorista</option>
+                        <option value="Gerente">Gerente</option>
+                        <option value="Outro">Outro</option>
+                     </select>
+                   </div>
+                   <div className="flex items-center mt-6">
+                     <label className="flex items-center gap-2 cursor-pointer text-sm font-bold text-slate-700">
+                        <input type="checkbox" checked={teamFields.ativo} onChange={e => setTeamFields({...teamFields, ativo: e.target.checked})} className="w-4 h-4 text-blue-600 border-slate-300 rounded" />
+                        Funcionário Ativo
+                     </label>
+                   </div>
+                   <div className="md:col-span-2 flex justify-end gap-2 mt-2">
+                     <Button type="button" variant="outline" onClick={() => { setShowTeamForm(false); setEditingTeamMember(null); setTeamFields({nome:'', telefone:'', funcao:'Lavador', ativo:true}); }}>Cancelar</Button>
+                     <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white font-bold"><Save className="w-4 h-4 mr-2"/> Salvar</Button>
+                   </div>
+                 </form>
+              </Card>
+            )}
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+               {(teamMembers || []).map((m: any) => (
+                 <Card key={m.id} className={`p-5 flex flex-col justify-between border-l-4 ${m.ativo ? 'border-l-green-500' : 'border-l-slate-300 opacity-60'}`}>
+                   <div>
+                     <div className="flex justify-between items-start mb-2">
+                        <div>
+                          <h4 className="font-bold text-slate-800 text-lg">{m.nome}</h4>
+                          <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">{m.funcao}</span>
+                        </div>
+                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${m.ativo ? 'bg-green-100 text-green-700' : 'bg-slate-200 text-slate-600'}`}>
+                           {m.ativo ? 'ATIVO' : 'INATIVO'}
+                        </span>
+                     </div>
+                     {m.telefone && <p className="text-sm text-slate-600 flex items-center mt-2 font-mono"><PhoneForwarded className="w-3.5 h-3.5 mr-1" /> {m.telefone}</p>}
+                   </div>
+                   <div className="flex justify-between items-center mt-6 pt-4 border-t border-slate-100">
+                     <div className="text-xs text-slate-400">
+                       ID: {m.id?.slice(0,8)}
+                     </div>
+                     <div className="flex gap-2">
+                       <button onClick={() => { 
+                         setEditingTeamMember(m); 
+                         setTeamFields({nome: m.nome, telefone: m.telefone || '', funcao: m.funcao || 'Lavador', ativo: m.ativo !== false}); 
+                         setShowTeamForm(true); 
+                       }} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded" title="Editar">
+                          <Edit className="w-4 h-4" />
+                       </button>
+                       <button onClick={() => handleDeleteTeamMember(m.id)} className="p-1.5 text-red-600 hover:bg-red-50 rounded" title="Excluir">
+                          <Trash2 className="w-4 h-4" />
+                       </button>
+                     </div>
+                   </div>
+                 </Card>
+               ))}
+               {(teamMembers || []).length === 0 && (
+                 <div className="col-span-1 md:col-span-3 text-center py-12 bg-slate-50 rounded-xl border border-dashed border-slate-200">
+                   <Briefcase className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+                   <h3 className="text-slate-600 font-bold">Nenhum funcionário cadastrado</h3>
+                   <p className="text-sm text-slate-500 mt-1">Clique em "Adicionar Funcionário" para começar.</p>
+                 </div>
+               )}
+            </div>
+          </div>
+        )}
+
         {activeTab === 'FIDELIDADE' && (
           <div className="space-y-6">
             <div className="flex items-center justify-between">
@@ -3559,6 +3706,107 @@ export function TenantAdminDashboard() {
                     </>
                  )}
                </div>
+            </div>
+          </div>
+        )}
+
+        {showDbConfig && (
+          <div className="fixed inset-0 bg-slate-900/60 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+              <div className="p-4 border-b border-slate-200 flex items-center justify-between bg-slate-50">
+                <h3 className="font-bold text-slate-800 flex items-center gap-2">
+                  <DatabaseZap className="w-5 h-5 text-blue-600" /> Scripts de Banco de Dados
+                </h3>
+                <button onClick={() => setShowDbConfig(false)} className="text-slate-400 hover:text-slate-600 p-1">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              <div className="p-5 overflow-y-auto overflow-x-hidden space-y-4">
+                <p className="text-sm text-slate-600">
+                  Para o sistema funcionar perfeitamente sem bloqueios ao excluir ou adicionar registros, você deve copiar os comandos abaixo e executá-los na página <strong>SQL Editor</strong> do painel de controle da sua central do Supabase. Somente copie do começo ao fim e clique no botão <strong>RUN</strong> no Supabase.
+                </p>
+
+                <div className="bg-blue-50 border border-blue-200 rounded p-4 relative">
+                  <p className="font-bold text-blue-900 text-xs mb-2">Completar todas as regras de exclusão para funcionar sem erros:</p>
+                  <pre className="text-[10px] bg-slate-900 text-slate-100 p-3 rounded overflow-x-auto whitespace-pre-wrap">
+{`-- DEVOLVER PERMISSÃO COMPLETA DE EXCLUSÃO (Para O Dono do App) --
+
+ALTER TABLE public.customers ADD COLUMN IF NOT EXISTS veiculos jsonb;
+
+DROP POLICY IF EXISTS "Enable delete for authenticated users only" ON public.customers;
+DROP POLICY IF EXISTS "Tenant delete access customers" ON public.customers;
+CREATE POLICY "Tenant delete access customers" ON public.customers FOR DELETE USING (
+  EXISTS (SELECT 1 FROM public.tenants WHERE id = tenant_id AND owner_id = auth.uid()) OR public.is_super_admin(auth.uid())
+);
+
+DROP POLICY IF EXISTS "Enable delete for authenticated users only" ON public.appointments;
+DROP POLICY IF EXISTS "Tenant delete access appointments" ON public.appointments;
+CREATE POLICY "Tenant delete access appointments" ON public.appointments FOR DELETE USING (
+  EXISTS (SELECT 1 FROM public.tenants WHERE id = tenant_id AND owner_id = auth.uid()) OR public.is_super_admin(auth.uid())
+);
+
+DROP POLICY IF EXISTS "Enable delete for authenticated users only" ON public.finances;
+DROP POLICY IF EXISTS "Tenant delete access finances" ON public.finances;
+CREATE POLICY "Tenant delete access finances" ON public.finances FOR DELETE USING (
+  EXISTS (SELECT 1 FROM public.tenants WHERE id = tenant_id AND owner_id = auth.uid()) OR public.is_super_admin(auth.uid())
+);
+
+DROP POLICY IF EXISTS "Enable delete for authenticated users only" ON public.inventory;
+DROP POLICY IF EXISTS "Tenant delete access inventory" ON public.inventory;
+CREATE POLICY "Tenant delete access inventory" ON public.inventory FOR DELETE USING (
+  EXISTS (SELECT 1 FROM public.tenants WHERE id = tenant_id AND owner_id = auth.uid()) OR public.is_super_admin(auth.uid())
+);
+
+DROP POLICY IF EXISTS "Enable delete for authenticated users only" ON public.team_members;
+DROP POLICY IF EXISTS "Tenant delete access team_members" ON public.team_members;
+CREATE POLICY "Tenant delete access team_members" ON public.team_members FOR DELETE USING (
+  EXISTS (SELECT 1 FROM public.tenants WHERE id = tenant_id AND owner_id = auth.uid()) OR public.is_super_admin(auth.uid())
+);
+
+DROP POLICY IF EXISTS "Tenant full access finances" ON public.finances;
+CREATE POLICY "Tenant full access finances" ON public.finances FOR ALL USING (true) WITH CHECK (true);`}
+                  </pre>
+                  <button 
+                    onClick={() => {
+                      navigator.clipboard.writeText(`ALTER TABLE public.customers ADD COLUMN IF NOT EXISTS veiculos jsonb; DROP POLICY IF EXISTS "Enable delete for authenticated users only" ON public.customers; DROP POLICY IF EXISTS "Tenant delete access customers" ON public.customers; CREATE POLICY "Tenant delete access customers" ON public.customers FOR DELETE USING (EXISTS (SELECT 1 FROM public.tenants WHERE id = tenant_id AND owner_id = auth.uid()) OR public.is_super_admin(auth.uid())); DROP POLICY IF EXISTS "Enable delete for authenticated users only" ON public.appointments; DROP POLICY IF EXISTS "Tenant delete access appointments" ON public.appointments; CREATE POLICY "Tenant delete access appointments" ON public.appointments FOR DELETE USING (EXISTS (SELECT 1 FROM public.tenants WHERE id = tenant_id AND owner_id = auth.uid()) OR public.is_super_admin(auth.uid())); DROP POLICY IF EXISTS "Enable delete for authenticated users only" ON public.finances; DROP POLICY IF EXISTS "Tenant delete access finances" ON public.finances; CREATE POLICY "Tenant delete access finances" ON public.finances FOR DELETE USING (EXISTS (SELECT 1 FROM public.tenants WHERE id = tenant_id AND owner_id = auth.uid()) OR public.is_super_admin(auth.uid())); DROP POLICY IF EXISTS "Enable delete for authenticated users only" ON public.inventory; DROP POLICY IF EXISTS "Tenant delete access inventory" ON public.inventory; CREATE POLICY "Tenant delete access inventory" ON public.inventory FOR DELETE USING (EXISTS (SELECT 1 FROM public.tenants WHERE id = tenant_id AND owner_id = auth.uid()) OR public.is_super_admin(auth.uid())); DROP POLICY IF EXISTS "Enable delete for authenticated users only" ON public.team_members; DROP POLICY IF EXISTS "Tenant delete access team_members" ON public.team_members; CREATE POLICY "Tenant delete access team_members" ON public.team_members FOR DELETE USING (EXISTS (SELECT 1 FROM public.tenants WHERE id = tenant_id AND owner_id = auth.uid()) OR public.is_super_admin(auth.uid())); DROP POLICY IF EXISTS "Tenant full access finances" ON public.finances; CREATE POLICY "Tenant full access finances" ON public.finances FOR ALL USING (true) WITH CHECK (true);`);
+                      alert("Comando Copiado! Cole no SQL Editor no Supabase e aperte RUN.");
+                    }}
+                    className="absolute top-4 right-4 bg-white/10 hover:bg-white/20 text-white p-1 rounded backdrop-blur border border-white/20"
+                  >
+                     <Copy className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+
+                <div className="bg-amber-50 border border-amber-200 rounded p-4 relative">
+                  <p className="font-bold text-amber-900 text-xs mb-2">Comandos da nova funcionalidade (Funcionários/Time):</p>
+                  <pre className="text-[10px] bg-slate-900 text-slate-100 p-3 rounded overflow-x-auto whitespace-pre-wrap">
+{`CREATE TABLE IF NOT EXISTS public.team_members (
+  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  tenant_id uuid NOT NULL REFERENCES public.tenants(id) ON DELETE CASCADE,
+  nome text NOT NULL,
+  telefone text,
+  funcao text,
+  ativo boolean DEFAULT true,
+  created_at timestamp with time zone DEFAULT now()
+);
+
+DROP POLICY IF EXISTS "Tenant full access team_members" ON public.team_members;
+CREATE POLICY "Tenant full access team_members" ON public.team_members FOR ALL USING (true) WITH CHECK (true);
+
+ALTER TABLE public.team_members ENABLE ROW LEVEL SECURITY;
+`}
+                  </pre>
+                  <button 
+                    onClick={() => {
+                      navigator.clipboard.writeText(`CREATE TABLE IF NOT EXISTS public.team_members ( id uuid DEFAULT gen_random_uuid() PRIMARY KEY, tenant_id uuid NOT NULL REFERENCES public.tenants(id) ON DELETE CASCADE, nome text NOT NULL, telefone text, funcao text, ativo boolean DEFAULT true, created_at timestamp with time zone DEFAULT now() ); DROP POLICY IF EXISTS "Tenant full access team_members" ON public.team_members; CREATE POLICY "Tenant full access team_members" ON public.team_members FOR ALL USING (true) WITH CHECK (true); ALTER TABLE public.team_members ENABLE ROW LEVEL SECURITY;`);
+                      alert("Comando para Funcionários copiado!");
+                    }}
+                    className="absolute top-4 right-4 bg-white/10 hover:bg-white/20 text-white p-1 rounded backdrop-blur border border-white/20"
+                  >
+                     <Copy className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         )}
