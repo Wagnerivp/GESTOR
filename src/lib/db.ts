@@ -54,6 +54,44 @@ export const MOCK_TENANTS = [
     services_pricing: {
       'Lavagem Simples': 40,
     }
+  },
+  {
+    id: 't-agua',
+    nome: 'Lava Jato Água',
+    slug: 'agua',
+    endereco: 'Rua das Fontes, 100',
+    telefone_whatsapp: '5511999997777',
+    status_assinatura: 'PAGO',
+    data_vencimento: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString(),
+    services_pricing: {
+      'Lavagem Simples': 50,
+      'Geral Completa': 200,
+    }
+  },
+  {
+    id: 't-agua4',
+    nome: 'Garagem 415 Estética Automotiva',
+    slug: 'agua4',
+    endereco: 'Av. Principal, 415',
+    telefone_whatsapp: '5521967348822',
+    status_assinatura: 'PAGO',
+    data_vencimento: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+    services_pricing: {
+      _client_code: 'agua4'
+    }
+  },
+  {
+    id: 't-wagner',
+    nome: 'Lava Jato Wagner',
+    slug: 'wagner',
+    endereco: 'Av. Principal, 500',
+    telefone_whatsapp: '5511999996666',
+    status_assinatura: 'PAGO',
+    data_vencimento: new Date(Date.now() + 20 * 24 * 60 * 60 * 1000).toISOString(),
+    services_pricing: {
+      'Lavagem Simples': 40,
+      'Geral': 98,
+    }
   }
 ];
 

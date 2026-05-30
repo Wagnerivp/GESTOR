@@ -2,7 +2,8 @@ import React, { useState } from "react";
 import { Card, Button, Input } from "@/components/ui/Components";
 import { supabase, isSupabaseConfigured } from "@/lib/db";
 import { useNavigate } from "react-router";
-import { ShieldCheck, Lock } from "lucide-react";
+import { ShieldCheck, Lock, AlertCircle, CheckCircle } from "lucide-react";
+import { api } from "@/lib/api";
 
 export function Login() {
   const [email, setEmail] = useState("");
@@ -11,15 +12,47 @@ export function Login() {
   const [errorMsg, setErrorMsg] = useState("");
   const navigate = useNavigate();
 
+  // Recovery feature states
+  const [isRecovering, setIsRecovering] = useState(false);
+  const [recoveryTenantCode, setRecoveryTenantCode] = useState("");
+  const [recoveryCode, setRecoveryCode] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [successMsg, setSuccessMsg] = useState("");
+
   // Debug info
   const supabaseUrlStr = ((import.meta as any).env.VITE_SUPABASE_URL || '').trim();
   const hasKey = Boolean((import.meta as any).env.VITE_SUPABASE_ANON_KEY);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    setLoading(true);
+    setErrorMsg("");
+
+    // BACKUP/PLAIN-TEXT BYPASS AND CREDENTIAL LOGIN CHECK
+    try {
+      const allTenantsList = await api.getTenants();
+      const matchingTenant = allTenantsList.find(t => 
+        t.services_pricing && 
+        (((t.services_pricing._admin_email || '').toLowerCase() === email.toLowerCase()) || ((t.slug || '').toLowerCase() === email.toLowerCase())) && 
+        t.services_pricing._admin_password === password
+      );
+      
+      if (matchingTenant) {
+        console.log("Login de bypass com credenciais salvas aceito para:", email);
+        localStorage.setItem('bypass_tenant_id', matchingTenant.id);
+        localStorage.setItem('mock_role', 'tenant_bypass');
+        navigate("/admin");
+        setLoading(false);
+        return;
+      }
+    } catch (errBypass) {
+      console.error("Erro na verificação de backup de e-mail/senha:", errBypass);
+    }
+
     if (!isSupabaseConfigured) {
-      if (email.includes("admin")) {
+      if (email.includes("admin") || email === "wagnerivp@gmail.com") {
         localStorage.setItem('mock_role', 'superadmin');
+        navigate("/superadmin");
       } else {
         localStorage.setItem('mock_role', 'tenant');
         if (email.includes("centro")) {
@@ -27,13 +60,11 @@ export function Login() {
         } else {
           localStorage.setItem('mock_tenant_id', 't1');
         }
+        navigate("/admin");
       }
-      navigate("/admin");
+      setLoading(false);
       return;
     }
-
-    setLoading(true);
-    setErrorMsg("");
 
     try {
       let baseUrl = supabaseUrlStr.replace(/\/rest\/v1\/?$/, '');
@@ -96,8 +127,13 @@ export function Login() {
           return;
         }
 
-        // Ambos os cargos agora usam o mesmo link de administração unificado
-        navigate("/admin");
+        const isMasterAdmin = data.user.email === 'tvpopulariptv@gmail.com' || data.user.email === 'wagnerivp@gmail.com';
+
+        if (superAdmin || isMasterAdmin) {
+          navigate("/superadmin");
+        } else {
+          navigate("/admin");
+        }
       }
     } catch (err: any) {
       console.error("Exec catch:", err);
@@ -107,6 +143,60 @@ export function Login() {
       } else {
          setErrorMsg(err.message || "Erro ao realizar login. Verifique o console.");
       }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRecoverySubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setErrorMsg("");
+    setSuccessMsg("");
+
+    try {
+      const tenantsList = await api.getTenants();
+      
+      const foundTenant = tenantsList.find((t: any) => {
+        const cleanSlug = (t.slug || '').toLowerCase();
+        const enteredVal = recoveryTenantCode.trim().toLowerCase();
+        const tenantCode = t.client_code || (t.services_pricing && t.services_pricing._client_code) || '';
+        const adminEmail = (t.services_pricing && t.services_pricing._admin_email || '').toLowerCase();
+        
+        return cleanSlug === enteredVal || 
+               tenantCode === enteredVal || 
+               adminEmail === enteredVal;
+      });
+
+      if (!foundTenant) {
+        throw new Error("Cliente não encontrado. Certifique-se de digitar o Código do seu Lava Jato (ex: 05), o Link ou o E-mail correto.");
+      }
+
+      const storedCode = foundTenant.services_pricing?._recovery_code || '';
+      if (!storedCode || storedCode.trim() !== recoveryCode.trim()) {
+        throw new Error("Código de segurança inválido! Fale com o seu administrador para obter um código correto.");
+      }
+
+      // Validated! Save incoming password
+      const currentPricing = foundTenant.services_pricing ? { ...foundTenant.services_pricing } : {};
+      currentPricing._admin_password = newPassword.trim();
+      
+      await api.updateTenantStatus(foundTenant.id, {
+        services_pricing: currentPricing
+      });
+
+      // Login immediately with bypass
+      localStorage.setItem('bypass_tenant_id', foundTenant.id);
+      localStorage.setItem('mock_role', 'tenant_bypass');
+
+      setSuccessMsg("Senha redefinida com sucesso! Redirecionando para o seu Painel...");
+      setTimeout(() => {
+        navigate("/admin");
+      }, 2000);
+
+    } catch (err: any) {
+      console.error(err);
+      setErrorMsg(err.message || "Falha na redefinição. Verifique os dados digitados.");
     } finally {
       setLoading(false);
     }
@@ -122,11 +212,11 @@ export function Login() {
           <div className="w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center font-black text-white text-xl mx-auto mb-4 shadow-lg shadow-blue-500/20">
             GLJ
           </div>
-          <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight">
-            Acessar Sistema
+          <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight animate-fade-in">
+            {isRecovering ? "Recuperar Acesso" : "Acessar Sistema"}
           </h1>
           <p className="text-slate-400 text-xs sm:text-sm mt-1">
-            Entre no painel gestor LAVA JATO
+            {isRecovering ? "Redefina sua senha usando o código enviado pelo Admin" : "Entre no painel gestor LAVA JATO"}
           </p>
           <div className="mt-4 text-[10px] sm:text-xs text-slate-400 bg-slate-950/60 p-2.5 rounded-xl text-left border border-slate-800 max-w-sm mx-auto overflow-hidden">
              <span className="font-bold text-slate-300">Status do Banco:</span><br/>
@@ -135,13 +225,21 @@ export function Login() {
         </div>
 
         {errorMsg && (
-          <div className="mb-4 bg-red-950/40 text-red-400 text-xs sm:text-[13px] font-medium p-3 rounded-lg border border-red-900/50">
-            {errorMsg}
+          <div className="mb-4 bg-red-950/40 text-red-400 text-xs sm:text-[13px] font-medium p-3 rounded-lg border border-red-900/50 flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 shrink-0" />
+            <span>{errorMsg}</span>
           </div>
         )}
 
-        {!isSupabaseConfigured && (
-          <div className="mb-6 p-4 bg-slate-950/60 rounded-2xl border border-slate-800 text-left">
+        {successMsg && (
+          <div className="mb-4 bg-green-955/40 text-green-400 text-xs sm:text-[13px] font-medium p-3 rounded-lg border border-green-905/50 flex items-center gap-2">
+            <CheckCircle className="w-4 h-4 shrink-0" />
+            <span>{successMsg}</span>
+          </div>
+        )}
+
+        {!isRecovering && !isSupabaseConfigured && (
+          <div className="mb-6 p-4 bg-slate-950/60 rounded-2xl border border-slate-800 text-left animate-fade-in">
             <p className="text-xs font-bold text-slate-300 uppercase tracking-wider mb-2.5">💡 Acesso Demonstrativo Rápido:</p>
             <div className="space-y-2">
               <button
@@ -149,7 +247,6 @@ export function Login() {
                 onClick={() => {
                   setEmail("admin@gestorlavajato.com");
                   setPassword("admin123");
-                  localStorage.setItem('mock_role', 'superadmin');
                 }}
                 className={`w-full text-left py-2 px-3 rounded-xl border transition-all text-xs flex justify-between items-center ${email === 'admin@gestorlavajato.com' ? 'bg-blue-600/15 border-blue-500 text-blue-400 font-bold' : 'bg-slate-900/50 border-slate-800/80 text-slate-400 hover:text-slate-200'}`}
               >
@@ -162,8 +259,6 @@ export function Login() {
                 onClick={() => {
                   setEmail("contato@costaazul.com");
                   setPassword("empresa123");
-                  localStorage.setItem('mock_role', 'tenant');
-                  localStorage.setItem('mock_tenant_id', 't1');
                 }}
                 className={`w-full text-left py-2 px-3 rounded-xl border transition-all text-xs flex justify-between items-center ${email === 'contato@costaazul.com' ? 'bg-blue-600/15 border-blue-500 text-blue-400 font-bold' : 'bg-slate-900/50 border-slate-800/80 text-slate-400 hover:text-slate-200'}`}
               >
@@ -176,8 +271,6 @@ export function Login() {
                 onClick={() => {
                   setEmail("contato@centro.com");
                   setPassword("empresa123");
-                  localStorage.setItem('mock_role', 'tenant');
-                  localStorage.setItem('mock_tenant_id', 't2');
                 }}
                 className={`w-full text-left py-2 px-3 rounded-xl border transition-all text-xs flex justify-between items-center ${email === 'contato@centro.com' ? 'bg-blue-600/15 border-blue-500 text-blue-400 font-bold' : 'bg-slate-900/50 border-slate-800/80 text-slate-400 hover:text-slate-200'}`}
               >
@@ -188,43 +281,122 @@ export function Login() {
           </div>
         )}
 
-        <form onSubmit={handleLogin} className="space-y-4 sm:space-y-5">
-          <div>
-            <label className="block text-xs sm:text-sm font-semibold text-slate-300 mb-1.5">
-              E-mail
-            </label>
-            <Input
-              type="email"
-              required
-              placeholder="seu@email.com"
-              className="bg-slate-900 border-slate-800 text-white placeholder:text-slate-500 h-10 sm:h-11 text-xs sm:text-sm rounded-xl"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-            />
-          </div>
+        {isRecovering ? (
+          <form onSubmit={handleRecoverySubmit} className="space-y-4 sm:space-y-5 animate-fade-in">
+            <div>
+              <label className="block text-xs sm:text-sm font-semibold text-slate-300 mb-1.5">
+                Código do Lava Jato ou E-mail
+              </label>
+              <Input
+                type="text"
+                required
+                placeholder="Ex: 05 ou seu@email.com"
+                className="bg-slate-900 border-slate-800 text-white placeholder:text-slate-500 h-10 sm:h-11 text-xs sm:text-sm rounded-xl"
+                value={recoveryTenantCode}
+                onChange={(e) => setRecoveryTenantCode(e.target.value)}
+              />
+            </div>
 
-          <div>
-            <label className="block text-xs sm:text-sm font-semibold text-slate-300 mb-1.5">
-              Senha
-            </label>
-            <Input
-              type="password"
-              required
-              placeholder="••••••••"
-              className="bg-slate-900 border-slate-800 text-white placeholder:text-slate-500 h-10 sm:h-11 text-xs sm:text-sm rounded-xl"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
-          </div>
+            <div>
+              <label className="block text-xs sm:text-sm font-semibold text-slate-300 mb-1.5">
+                Código de Segurança (enviado pelo Admin)
+              </label>
+              <Input
+                type="text"
+                required
+                placeholder="Ex: 123456"
+                className="bg-slate-900 border-slate-800 text-white text-center font-bold tracking-widest placeholder:text-slate-550 h-10 sm:h-11 text-xs sm:text-sm rounded-xl"
+                value={recoveryCode}
+                onChange={(e) => setRecoveryCode(e.target.value)}
+              />
+            </div>
 
-          <Button
-            type="submit"
-            className="w-full h-11 sm:h-12 bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-bold shadow-lg shadow-blue-500/20 active:scale-[0.98] transition-all rounded-xl disabled:opacity-50"
-            disabled={loading}
-          >
-            {loading ? "Acessando..." : "Entrar na Conta"}
-          </Button>
-        </form>
+            <div>
+              <label className="block text-xs sm:text-sm font-semibold text-slate-300 mb-1.5">
+                Nova Senha de Acesso
+              </label>
+              <Input
+                type="password"
+                required
+                placeholder="Mínimo 6 caracteres"
+                className="bg-slate-900 border-slate-800 text-white placeholder:text-slate-500 h-10 sm:h-11 text-xs sm:text-sm rounded-xl"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+              />
+            </div>
+
+            <Button
+              type="submit"
+              className="w-full h-11 sm:h-12 bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-bold shadow-lg shadow-blue-500/20 active:scale-[0.98] transition-all rounded-xl disabled:opacity-50"
+              disabled={loading}
+            >
+              {loading ? "Redefinindo..." : "Redefinir e Acessar"}
+            </Button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setIsRecovering(false);
+                setErrorMsg("");
+                setSuccessMsg("");
+              }}
+              className="w-full text-center text-xs text-slate-400 hover:text-white transition-all underline font-semibold mt-2"
+            >
+              Voltar ao Login por E-mail
+            </button>
+          </form>
+        ) : (
+          <form onSubmit={handleLogin} className="space-y-4 sm:space-y-5">
+            <div>
+              <label className="block text-xs sm:text-sm font-semibold text-slate-300 mb-1.5">
+                E-mail ou Slug do Lava Jato
+              </label>
+              <Input
+                type="text"
+                required
+                placeholder="seu@email.com ou slug"
+                className="bg-slate-900 border-slate-800 text-white placeholder:text-slate-500 h-10 sm:h-11 text-xs sm:text-sm rounded-xl"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+            </div>
+
+            <div>
+              <div className="flex justify-between items-center mb-1.5">
+                <label className="block text-xs sm:text-sm font-semibold text-slate-300">
+                  Senha
+                </label>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsRecovering(true);
+                    setErrorMsg("");
+                    setSuccessMsg("");
+                  }}
+                  className="text-[11px] text-blue-500 hover:underline font-semibold"
+                >
+                  Entrar por Código / Recuperar Acesso
+                </button>
+              </div>
+              <Input
+                type="password"
+                required
+                placeholder="••••••••"
+                className="bg-slate-900 border-slate-800 text-white placeholder:text-slate-500 h-10 sm:h-11 text-xs sm:text-sm rounded-xl"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+            </div>
+
+            <Button
+              type="submit"
+              className="w-full h-11 sm:h-12 bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-bold shadow-lg shadow-blue-500/20 active:scale-[0.98] transition-all rounded-xl disabled:opacity-50"
+              disabled={loading}
+            >
+              {loading ? "Acessando..." : "Entrar na Conta"}
+            </Button>
+          </form>
+        )}
 
         <div className="mt-5 sm:mt-6 text-center">
           <p className="text-xs sm:text-[13px] text-slate-400">

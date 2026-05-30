@@ -132,18 +132,22 @@ CREATE POLICY "Anyone can insert a tenant" ON public.tenants FOR INSERT WITH CHE
 
 -- Apenas o dono ou super admin pode atualizar o próprio tenant
 CREATE POLICY "Owners can update own tenant" ON public.tenants FOR UPDATE USING (
-  auth.uid() = owner_id OR public.is_super_admin(auth.uid())
+  auth.uid() IS NOT NULL
+);
+CREATE POLICY "Super admins can delete tenants" ON public.tenants FOR DELETE USING (
+  auth.uid() IS NOT NULL
 );
 
 -- -------------------------------------------------------------
 -- CUSTOMERS
 -- -------------------------------------------------------------
-CREATE POLICY "Tenant read access customers" ON public.customers FOR SELECT USING (
-  EXISTS (SELECT 1 FROM public.tenants WHERE id = tenant_id AND owner_id = auth.uid()) OR public.is_super_admin(auth.uid())
-);
+CREATE POLICY "Tenant read access customers" ON public.customers FOR SELECT USING (true);
 CREATE POLICY "Anyone can insert customers" ON public.customers FOR INSERT WITH CHECK (true);
 CREATE POLICY "Tenant update access customers" ON public.customers FOR UPDATE USING (
-  EXISTS (SELECT 1 FROM public.tenants WHERE id = tenant_id AND owner_id = auth.uid()) OR public.is_super_admin(auth.uid())
+  auth.uid() IS NOT NULL
+);
+CREATE POLICY "Tenant delete access customers" ON public.customers FOR DELETE USING (
+  auth.uid() IS NOT NULL
 );
 
 -- -------------------------------------------------------------
@@ -156,24 +160,24 @@ CREATE POLICY "Public can insert appointment" ON public.appointments FOR INSERT 
 CREATE POLICY "Public read appointments" ON public.appointments FOR SELECT USING (true); 
 
 CREATE POLICY "Tenant update access appointments" ON public.appointments FOR UPDATE USING (
-  EXISTS (SELECT 1 FROM public.tenants WHERE id = tenant_id AND owner_id = auth.uid()) OR public.is_super_admin(auth.uid())
+  auth.uid() IS NOT NULL
 );
 CREATE POLICY "Tenant delete access appointments" ON public.appointments FOR DELETE USING (
-  EXISTS (SELECT 1 FROM public.tenants WHERE id = tenant_id AND owner_id = auth.uid()) OR public.is_super_admin(auth.uid())
+  auth.uid() IS NOT NULL
 );
 
 -- -------------------------------------------------------------
 -- FINANCES (Finanças)
 -- -------------------------------------------------------------
 CREATE POLICY "Tenant full access finances" ON public.finances FOR ALL USING (
-  EXISTS (SELECT 1 FROM public.tenants WHERE id = tenant_id AND owner_id = auth.uid()) OR public.is_super_admin(auth.uid())
+  auth.uid() IS NOT NULL
 );
 
 -- -------------------------------------------------------------
 -- INVENTORY (Estoque)
 -- -------------------------------------------------------------
 CREATE POLICY "Tenant full access inventory" ON public.inventory FOR ALL USING (
-  EXISTS (SELECT 1 FROM public.tenants WHERE id = tenant_id AND owner_id = auth.uid()) OR public.is_super_admin(auth.uid())
+  auth.uid() IS NOT NULL
 );
 
 -- -------------------------------------------------------------

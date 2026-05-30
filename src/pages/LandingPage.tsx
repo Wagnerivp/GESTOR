@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, Button, Input } from '@/components/ui/Components';
 import { api } from '@/lib/api';
 import { supabase, isSupabaseConfigured } from '@/lib/db';
+import { formatBRPhone } from '@/lib/utils';
 import { addDays } from 'date-fns';
 import { Rocket, ShieldCheck, Store, UserCircle, ArrowRight } from 'lucide-react';
 import { useNavigate } from 'react-router';
@@ -40,82 +41,49 @@ export function LandingPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 flex flex-col font-sans relative overflow-hidden">
-      {/* Background ambient glows */}
-      <div className="absolute top-0 left-1/4 w-96 h-96 bg-blue-600/10 rounded-full blur-3xl pointer-events-none"></div>
-      <div className="absolute bottom-10 right-1/4 w-96 h-96 bg-emerald-600/5 rounded-full blur-3xl pointer-events-none"></div>
+    <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center font-sans relative overflow-hidden p-4">
+      {/* Dynamic ambient backgrounds */}
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-blue-600/10 rounded-full blur-[120px] pointer-events-none"></div>
+      <div className="absolute top-1/3 left-1/3 w-[300px] h-[300px] bg-emerald-600/5 rounded-full blur-[100px] pointer-events-none"></div>
 
-      <header className="bg-slate-950/80 backdrop-blur-md py-4 sm:py-6 border-b border-slate-800/80 sticky top-0 z-50">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 flex justify-between items-center">
-          <div className="font-extrabold text-lg sm:text-2xl tracking-tighter text-white flex items-center gap-1.5 py-1 sm:py-2">
-            <span className="bg-blue-600 text-white px-2 py-0.5 rounded-lg text-sm sm:text-lg font-black shadow-lg shadow-blue-600/20">GLJ</span>
-            <span className="hidden xs:inline">gestor <span className="text-blue-500 font-black uppercase">LAVA JATO</span></span>
-            <span className="xs:hidden">gestor <span className="text-blue-500 font-black uppercase">LJ</span></span>
-          </div>
-          <div className="flex items-center gap-2 sm:gap-4">
-            <Button 
-              variant="outline" 
-              className="border-slate-800 bg-slate-900/50 text-slate-300 hover:text-white hover:bg-slate-800 hover:border-slate-700 h-9 sm:h-10 px-3 sm:px-5 text-xs sm:text-[13px] font-semibold transition-all rounded-xl"
-              onClick={() => navigate('/login')}
-            >
-              Entrar
-            </Button>
-            <Button 
-              className="bg-blue-600 text-white hover:bg-blue-700 h-9 sm:h-10 px-3 sm:px-5 text-xs sm:text-[13px] font-semibold transition-all shadow-lg shadow-blue-500/20 active:scale-95 rounded-xl hidden sm:inline-flex"
-              onClick={() => navigate('/cadastro-parceiro')}
-            >
-              Criar Conta Grátis
-            </Button>
-          </div>
+      {/* Main Container */}
+      <div className="text-center z-10 max-w-lg w-full flex flex-col items-center animate-fade-in px-4">
+        {/* Subtle logo insignia */}
+        <div className="font-extrabold text-sm sm:text-base tracking-widest text-slate-500 flex items-center gap-2 mb-8 select-none">
+          <span className="bg-blue-600 text-white px-2 py-0.5 rounded-md text-[11px] font-black shadow-lg shadow-blue-600/20">GLJ</span>
+          <span>GESTOR LAVA JATO</span>
         </div>
-      </header>
 
-      <main className="flex-1 flex flex-col items-center justify-center px-4 sm:px-6 py-12 sm:py-20 z-10">
-        <div className="text-center w-full max-w-6xl mx-auto">
-          <div className="inline-flex items-center gap-2 bg-slate-900 border border-slate-800 text-blue-400 px-3 py-1.5 rounded-full text-xs font-semibold mb-6 shadow-inner tracking-wide">
-            <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span>
-            Plataforma Completa gestor LAVA JATO
-          </div>
-
-          <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black tracking-tight leading-none mb-4 text-white max-w-4xl mx-auto">
-            Escolha seu portal de <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-blue-600">Acesso</span>
-          </h1>
-          <p className="text-sm sm:text-base md:text-lg text-slate-400 max-w-2xl mx-auto mb-10 sm:mb-14 leading-relaxed">
-            Seja bem-vindo ao sistema de controle e agendamento de lava-jatos.
-          </p>
-
-          <div className="max-w-md mx-auto w-full">
-            {/* Card Administrativo */}
-            <Card 
-              className="bg-slate-900/40 border-slate-800/80 hover:border-blue-500/50 hover:bg-slate-900/80 transition-all p-6 sm:p-8 text-center cursor-pointer flex flex-col group rounded-3xl relative overflow-hidden backdrop-blur-sm"
-              onClick={enterAsAdmin}
-            >
-              <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500/5 rounded-full blur-2xl group-hover:bg-blue-500/10 transition-all duration-500"></div>
-              <div className="flex flex-col items-center">
-                <div className="bg-slate-950/80 w-14 h-14 rounded-2xl flex items-center justify-center mb-6 border border-slate-800 shadow-inner group-hover:border-blue-500/40 transition-all">
-                  <ShieldCheck className="w-7 h-7 text-blue-500 group-hover:scale-110 transition-transform duration-300" />
-                </div>
-                <h3 className="text-lg sm:text-xl font-extrabold text-white mb-3">
-                  Painel Administrativo Mestre
-                </h3>
-                <p className="text-slate-400 text-xs sm:text-[13px] mb-8 leading-relaxed max-w-sm">
-                  Acesso mestre do dono da plataforma para gerenciar parceiros, ativar planos e controlar todas as assinaturas dos donos dos lava jatos.
-                </p>
-              </div>
-              <Button 
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white h-12 text-xs sm:text-sm font-bold rounded-xl transition-all shadow-lg shadow-blue-500/20 hover:shadow-blue-500/30"
-                onClick={(e) => { e.stopPropagation(); enterAsAdmin(); }}
-              >
-                Acessar Meu Painel Administrativo
-              </Button>
-            </Card>
-          </div>
+        {/* Dynamic Interactive Call to Action */}
+        <button
+          type="button"
+          id="btn-signup-main"
+          onClick={() => navigate('/cadastro-parceiro')}
+          className="group relative w-full bg-gradient-to-r from-blue-600 via-blue-500 to-indigo-600 text-white font-black text-lg sm:text-2xl py-6 px-8 rounded-2xl shadow-2xl shadow-blue-500/20 hover:shadow-blue-500/40 active:scale-[0.98] transition-all duration-300 ease-out border border-blue-400/30 overflow-hidden cursor-pointer"
+        >
+          {/* Shine effect overlay */}
+          <div className="absolute inset-0 w-1/2 h-full bg-white/10 transform -skew-x-12 -translate-x-full group-hover:animate-shine pointer-events-none"></div>
           
-          <div className="mt-12 sm:mt-16 text-slate-500 text-xs sm:text-sm">
-            Deseja cadastrar o seu Lava Jato na plataforma? <button onClick={() => navigate('/cadastro-parceiro')} className="text-blue-500 hover:text-blue-400 hover:underline font-bold transition-colors">Cadastre sua empresa aqui</button>
-          </div>
+          <span className="relative z-10 block tracking-wider uppercase font-sans">
+            CADASTRE SUA EMPRESA AGORA
+          </span>
+          <span className="absolute bottom-2 left-1/2 -translate-x-1/2 text-[9px] font-bold text-blue-200 tracking-widest opacity-0 group-hover:opacity-100 transition-opacity duration-350">
+            CLIQUE PARA COMEÇAR 30 DIAS GRÁTIS
+          </span>
+        </button>
+
+        {/* Discretionary stealth link for system administration */}
+        <div className="mt-12 select-none">
+          <button 
+            type="button"
+            id="btn-stealth-login"
+            onClick={() => navigate('/login')} 
+            className="text-slate-600 hover:text-slate-400 text-xs font-semibold tracking-wider transition-colors uppercase border-b border-transparent hover:border-slate-500 pb-0.5"
+          >
+            Acessar Painel
+          </button>
         </div>
-      </main>
+      </div>
     </div>
   );
 }
@@ -179,15 +147,21 @@ export function PartnerSignup() {
       }
 
       // 3. Cadastrar a Tabela Tenant
+      const cleanDigits = formData.telefone.replace(/\D/g, '');
+      const finalPhone = cleanDigits.startsWith('55') && cleanDigits.length > 10 ? cleanDigits : '55' + cleanDigits;
+
       const payload: any = {
         nome: formData.nome,
         slug: formData.slug,
         endereco: formData.endereco,
-        telefone_whatsapp: formData.telefone,
+        telefone_whatsapp: finalPhone,
         status_assinatura: 'GRATUITO',
         services_pricing: {
           'Lavagem Simples': 50,
-          'Lavagem Completa': 80
+          'Lavagem Completa': 80,
+          '_admin_email': formData.email,
+          '_admin_password': formData.password,
+          '_recovery_code': Math.floor(100000 + Math.random() * 900000).toString()
         }
       };
       
@@ -281,7 +255,7 @@ export function PartnerSignup() {
                 <Input 
                   required 
                   className="rounded-none border-0 bg-transparent text-white placeholder:text-slate-500 h-10 text-[13px]"
-                  placeholder="centralwash" 
+                  placeholder="NOME DO MEU COMERCIO" 
                   value={formData.slug} 
                   onChange={e => setFormData({...formData, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '')})} 
                 />
@@ -299,13 +273,27 @@ export function PartnerSignup() {
           </div>
           <div>
             <label className="block text-xs sm:text-sm font-semibold text-slate-300 mb-1.5">WhatsApp Comercial</label>
-            <Input 
-              required 
-              placeholder="Ex: 5511999999999" 
-              className="bg-slate-900 border-slate-800 text-white placeholder:text-slate-500 h-10 text-[13px] rounded-lg"
-              value={formData.telefone} 
-              onChange={e => setFormData({...formData, telefone: e.target.value})} 
-            />
+            <div className="relative flex items-center">
+              <span className="absolute left-3 flex items-center select-none pointer-events-none text-base border-r border-slate-800 pr-2.5 h-5 text-slate-400">
+                🇧🇷
+              </span>
+              <Input 
+                required 
+                placeholder="(11) 99999-9999" 
+                className="bg-slate-900 border-slate-800 text-white placeholder:text-slate-500 h-10 text-[13px] rounded-lg pl-12 w-full"
+                value={formatBRPhone(formData.telefone)} 
+                onChange={e => {
+                  const rawValue = e.target.value.replace(/\D/g, '');
+                  let stripped = rawValue;
+                  if (rawValue.startsWith('55') && rawValue.length > 10) {
+                    stripped = rawValue.substring(2);
+                  }
+                  if (stripped.length <= 11) {
+                    setFormData({...formData, telefone: stripped});
+                  }
+                }} 
+              />
+            </div>
           </div>
 
           <Button 

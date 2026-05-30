@@ -41,10 +41,10 @@ export function SetupScreen() {
         </Card>
 
         <div className="flex justify-center space-x-4">
-          <Button className="bg-blue-600 text-white" onClick={() => window.location.href = '/superadmin'}>
+          <Button className="bg-blue-600 text-white" onClick={() => window.location.href = '#/superadmin'}>
             Ir para Super Admin (Mock)
           </Button>
-          <Button variant="secondary" onClick={() => window.location.href = '/cadastro-parceiro'}>
+          <Button variant="secondary" onClick={() => window.location.href = '#/cadastro-parceiro'}>
             Ver Landing Page
           </Button>
         </div>
